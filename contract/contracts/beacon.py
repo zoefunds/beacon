@@ -174,6 +174,11 @@ class Beacon(gl.Contract):
 
     @gl.public.write.payable
     def open_release(self, repo: str, ref: str, baseline: str, implementer: str, title: str, obligations_json: str, scope_json: str, seal_by: int) -> str:
+        # A fresh deployed instance has no materialized maps until its first
+        # state-changing call. Bootstrap them here so the first release is
+        # reliable across node implementations.
+        if not hasattr(self, "releases"):
+            self.__init__()
         if int(gl.message.value) < MIN_ESCROW: raise gl.vm.UserError("minimum_escrow")
         if not repository(repo) or not sha(baseline) or not re.fullmatch(r"0x[0-9a-fA-F]{40}", implementer or ""): raise gl.vm.UserError("invalid_identity")
         if seal_by <= now() + 300: raise gl.vm.UserError("seal_time_too_soon")
@@ -387,10 +392,14 @@ class Beacon(gl.Contract):
         self.balances[account] = u256(0); gl.get_contract_at(Address(account)).emit_transfer(value=u256(amount)); return str(amount)
 
     @gl.public.view
-    def get_release(self, release_id: u256) -> str: return self.releases[release_id] or ""
+    def get_release(self, release_id: u256) -> str:
+        return self.releases[release_id] or "" if hasattr(self, "releases") else ""
     @gl.public.view
-    def get_entry(self, release_id: u256, index: int) -> str: return self.entries[self._key(release_id, "entry", index)] or ""
+    def get_entry(self, release_id: u256, index: int) -> str:
+        return self.entries[self._key(release_id, "entry", index)] or "" if hasattr(self, "entries") else ""
     @gl.public.view
-    def get_edge(self, release_id: u256, index: int) -> str: return self.edges[self._key(release_id, "edge", index)] or ""
+    def get_edge(self, release_id: u256, index: int) -> str:
+        return self.edges[self._key(release_id, "edge", index)] or "" if hasattr(self, "edges") else ""
     @gl.public.view
-    def get_balance(self, account: str) -> u256: return self.balances[account.lower()]
+    def get_balance(self, account: str) -> u256:
+        return self.balances[account.lower()] if hasattr(self, "balances") else u256(0)
