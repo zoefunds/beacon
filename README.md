@@ -1,0 +1,42 @@
+# Beacon
+
+**A release-attestation protocol for consequential repository changes on GenLayer.**
+
+Beacon holds GEN until a declared release is independently attested against a frozen repository baseline. Its central primitive is a **release seal**: the implementer selects a reachable commit *before* the deadline and validators bind that commit, its tree, and every in-scope path to the agreement. Nothing observed for the first time after the deadline can become the release under review.
+
+## What makes an attestation complete
+
+Beacon produces a settlement certificate only when all of these are true:
+
+1. A pre-deadline release seal is verified and remains the only review target.
+2. The complete scoped tree inventory is materialized, including unchanged files.
+3. Every inventory entry has a byte-verified Git blob or a supported, explicitly classified non-text representation.
+4. A deterministic dependency extractor records all supported local import edges; semantic observations may add context but cannot remove edges.
+5. Every affected component and every cross-component edge has an attestation result.
+6. The certificate commits to the agreement, inventory, blob hashes, dependency graph, assessments, and coverage counters.
+
+Unsupported content, tree truncation, ambiguous resolution, missing evidence, or budget exhaustion blocks positive settlement. The protocol can return `INDETERMINATE`, but it never upgrades partial coverage into success.
+
+## Layout
+
+```text
+contract/       GenLayer Intelligent Contract and direct tests
+frontend/       browser-only Next.js operations console
+docs/           protocol, trust, and operational documentation
+scripts/        reproducibility and architecture checks
+```
+
+## Lifecycle
+
+`DRAFT → SEALED → INVENTORY → MATERIALIZED → ATTESTING → REVIEW → FINAL`
+
+The release seal belongs before the deadline. Post-deadline callers merely advance bounded, deterministic work over that seal.
+
+## Local validation
+
+```sh
+npm ci
+npm --prefix frontend ci
+python -m pip install -r contract/requirements.txt
+npm run check
+```

@@ -1,0 +1,25 @@
+name: Beacon verification
+on: [push, pull_request]
+jobs:
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: npm --prefix frontend ci --ignore-scripts
+      - run: npm --prefix frontend run test
+      - run: npm --prefix frontend run build
+  contract-syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - run: python -B -c "import ast; ast.parse(open('contract/contracts/beacon.py').read())"
+      - run: python -m pip install -r contract/requirements.txt
+      - run: genvm-lint setup --version v0.6.0-rc6
+      - run: genvm-lint check contract/contracts/beacon.py
+      - run: python -m pytest contract/tests -q
+      - run: python contract/tests/mutation/run.py
+      - run: node scripts/audit-protocol.mjs
