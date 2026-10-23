@@ -141,13 +141,17 @@ def resolve_local_import(source, reference, available):
     return matches[0] if len(matches) == 1 else None
 
 class Beacon(gl.Contract):
+    # Persistent maps must be declared as storage fields. Constructing them in
+    # __init__ creates an ephemeral map in the current Studionet runtime.
+    next_id: u256
+    releases: TreeMap[u256, str]
+    entries: TreeMap[str, str]
+    edges: TreeMap[str, str]
+    components: TreeMap[str, str]
+    balances: TreeMap[str, u256]
+
     def __init__(self):
         self.next_id = u256(1)
-        self.releases = TreeMap[u256, str]()
-        self.entries = TreeMap[str, str]()
-        self.edges = TreeMap[str, str]()
-        self.components = TreeMap[str, str]()
-        self.balances = TreeMap[str, u256]()
 
     def _key(self, release_id, kind, index): return f"{int(release_id)}:{kind}:{index}"
     def _load(self, release_id):
@@ -174,11 +178,6 @@ class Beacon(gl.Contract):
 
     @gl.public.write.payable
     def open_release(self, repo: str, ref: str, baseline: str, implementer: str, title: str, obligations_json: str, scope_json: str, seal_by: int) -> str:
-        # A fresh deployed instance has no materialized maps until its first
-        # state-changing call. Bootstrap them here so the first release is
-        # reliable across node implementations.
-        if not hasattr(self, "releases"):
-            self.__init__()
         if int(gl.message.value) < MIN_ESCROW: raise gl.vm.UserError("minimum_escrow")
         if not repository(repo) or not sha(baseline) or not re.fullmatch(r"0x[0-9a-fA-F]{40}", implementer or ""): raise gl.vm.UserError("invalid_identity")
         if seal_by <= now() + 300: raise gl.vm.UserError("seal_time_too_soon")
@@ -186,7 +185,7 @@ class Beacon(gl.Contract):
         except Exception: raise gl.vm.UserError("invalid_obligations")
         if not isinstance(obligations, list) or not 1 <= len(obligations) <= MAX_OBLIGATIONS or any(not str(x).strip() for x in obligations): raise gl.vm.UserError("invalid_obligations")
         release_id = self.next_id; self.next_id = u256(int(release_id) + 1)
-        item = {"id": int(release_id), "state": "DRAFT", "repo": repo, "ref": ref, "baseline": baseline.lower(), "implementer": implementer.lower(), "sponsors": {wallet(gl.message.sender): int(gl.message.value)}, "escrow": int(gl.message.value), "title": title[:120], "obligations": [str(x).strip() for x in obligations], "scope": normalized_scope(scope_json), "seal_by": seal_by, "seal": None, "inventory_count": 0, "materialized_count": 0, "component_count": 0, "assessed_count": 0, "edge_count": 0, "reviewed_edges": 0, "blockers": [], "challenge_until": 0, "challenge": None, "certificate": None}
+        item = {"id": int(release_id), "state": "DRAFT", "repo": repo, "ref": ref, "baseline": baseline.lower(), "implementer": implementer.lower(), "sponsors": {wallet(gl.message.sender_address): int(gl.message.value)}, "escrow": int(gl.message.value), "title": title[:120], "obligations": [str(x).strip() for x in obligations], "scope": normalized_scope(scope_json), "seal_by": seal_by, "seal": None, "inventory_count": 0, "materialized_count": 0, "component_count": 0, "assessed_count": 0, "edge_count": 0, "reviewed_edges": 0, "blockers": [], "challenge_until": 0, "challenge": None, "certificate": None}
         self._save(release_id, item)
         return canonical({"release_id": int(release_id), "state": "DRAFT"})
 
@@ -195,13 +194,13 @@ class Beacon(gl.Contract):
         item = self._load(release_id); self._require(item, "DRAFT")
         value = int(gl.message.value)
         if value <= 0: raise gl.vm.UserError("empty_funding")
-        who = wallet(gl.message.sender); item["sponsors"][who] = item["sponsors"].get(who, 0) + value; item["escrow"] += value
+        who = wallet(gl.message.sender_address); item["sponsors"][who] = item["sponsors"].get(who, 0) + value; item["escrow"] += value
         self._save(release_id, item); return "funded"
 
     @gl.public.write
     def seal_release(self, release_id: u256, commit: str) -> str:
         item = self._load(release_id); self._require(item, "DRAFT")
-        if wallet(gl.message.sender) != item["implementer"]: raise gl.vm.UserError("implementer_only")
+        if wallet(gl.message.sender_address) != item["implementer"]: raise gl.vm.UserError("implementer_only")
         if now() >= item["seal_by"] or not sha(commit): raise gl.vm.UserError("seal_closed")
         def fetch_seal(): return canonical(self._seal_source(item, commit) or {})
         try: seal = json.loads(gl.eq_principle.strict_eq(fetch_seal))
@@ -354,7 +353,7 @@ class Beacon(gl.Contract):
         item = self._load(release_id); self._require(item, "REVIEW")
         if now() >= item["challenge_until"]: raise gl.vm.UserError("challenge_window_closed")
         if item["certificate"]["outcome"] == "INDETERMINATE": raise gl.vm.UserError("indeterminate_certificate")
-        challenger = wallet(gl.message.sender)
+        challenger = wallet(gl.message.sender_address)
         if item["certificate"]["outcome"] == "ACCEPTED" and challenger not in item["sponsors"]: raise gl.vm.UserError("sponsor_only")
         if item["certificate"]["outcome"] == "REJECTED" and challenger != item["implementer"]: raise gl.vm.UserError("implementer_only")
         if not 0 <= entry_index < item["inventory_count"] or not 1 <= len(reason.strip()) <= 600: raise gl.vm.UserError("invalid_challenge")
@@ -387,19 +386,25 @@ class Beacon(gl.Contract):
 
     @gl.public.write
     def withdraw(self) -> str:
-        account = wallet(gl.message.sender); amount = int(self.balances[account] or 0)
+        account = wallet(gl.message.sender_address); amount = int(self.balances[account] or 0)
         if amount == 0: return "nothing_to_withdraw"
         self.balances[account] = u256(0); gl.get_contract_at(Address(account)).emit_transfer(value=u256(amount)); return str(amount)
 
     @gl.public.view
     def get_release(self, release_id: u256) -> str:
-        return self.releases[release_id] or "" if hasattr(self, "releases") else ""
+        if release_id not in self.releases: return ""
+        return self.releases[release_id] or ""
     @gl.public.view
     def get_entry(self, release_id: u256, index: int) -> str:
-        return self.entries[self._key(release_id, "entry", index)] or "" if hasattr(self, "entries") else ""
+        key = self._key(release_id, "entry", index)
+        if key not in self.entries: return ""
+        return self.entries[key] or ""
     @gl.public.view
     def get_edge(self, release_id: u256, index: int) -> str:
-        return self.edges[self._key(release_id, "edge", index)] or "" if hasattr(self, "edges") else ""
+        key = self._key(release_id, "edge", index)
+        if key not in self.edges: return ""
+        return self.edges[key] or ""
     @gl.public.view
     def get_balance(self, account: str) -> u256:
-        return self.balances[account.lower()] if hasattr(self, "balances") else u256(0)
+        key = account.lower()
+        return self.balances[key] if key in self.balances else u256(0)

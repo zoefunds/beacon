@@ -19,17 +19,24 @@ def direct_deploy(direct_vm, tmp_path):
         ).replace("from genlayer import *", "import genlayer as gl\nfrom genlayer import Address, TreeMap, u256", 1).replace(
             "class Beacon(gl.Contract):", "class Beacon(gl.contract.Contract):", 1
         ).replace('gl.message_raw["datetime"]', 'gl.message.raw["datetime"]', 1).replace(
-            "gl.message.sender", "gl.message.sender_address"
-        ).replace(
             "gl.get_contract_at(", "gl.contract.get_at(", 1
         )
-        # Direct Mode does not synthesize storage layouts for generic TreeMap
-        # constructor calls. Plain dicts preserve the mapping behaviour needed
-        # by these lifecycle tests; production storage remains TreeMap-backed.
-        for name in ("releases", "entries", "edges", "components", "balances"):
-            source = source.replace(f"self.{name} = TreeMap[u256, str]()", f"self.{name} = {{}}").replace(
-                f"self.{name} = TreeMap[str, str]()", f"self.{name} = {{}}"
-            ).replace(f"self.{name} = TreeMap[str, u256]()", f"self.{name} = {{}}")
+        # Direct Mode does not synthesize the generic TreeMap storage layout.
+        # Replace the production storage declarations with plain mappings in
+        # its isolated adapter while retaining production TreeMap semantics.
+        for name, declaration in (
+            ("releases", "TreeMap[u256, str]"), ("entries", "TreeMap[str, str]"),
+            ("edges", "TreeMap[str, str]"), ("components", "TreeMap[str, str]"),
+            ("balances", "TreeMap[str, u256]"),
+        ):
+            source = source.replace(f"    {name}: {declaration}\n", "")
+        source = source.replace(
+            "        self.next_id = u256(1)",
+            "        self.next_id = u256(1)\n"
+            "        self.releases = {}\n        self.entries = {}\n"
+            "        self.edges = {}\n        self.components = {}\n        self.balances = {}",
+            1,
+        )
         adapter = tmp_path / "beacon_direct_adapter.py"
         adapter.write_text(source, encoding="utf-8", newline="\n")
         return deploy_contract(adapter.resolve(), direct_vm, *args, sdk_version=DIRECT_VM_VERSION, **kwargs)
