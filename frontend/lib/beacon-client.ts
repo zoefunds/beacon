@@ -12,6 +12,8 @@ export const STUDIONET = {
 export type ReleaseRecord = Record<string, unknown>;
 export type BeaconArgument = string | number | bigint;
 export type BeaconTransaction = { hash: `0x${string}`; receipt: unknown; releaseId?: bigint };
+type ReceiptStatus = NonNullable<Parameters<ReturnType<typeof createClient>["waitForTransactionReceipt"]>[0]["status"]>;
+const FINALIZED_STATUS = "FINALIZED" as ReceiptStatus;
 
 export function contractAddress(): `0x${string}` | null {
   const value = process.env.NEXT_PUBLIC_BEACON_CONTRACT_ADDRESS;
@@ -96,7 +98,7 @@ export async function writeBeacon(input: {
   if (!address) throw new Error("Beacon contract address is not configured");
   const client = beaconWriter(input.account, input.provider);
   const hash = await client.writeContract({ address, functionName: input.functionName, args: input.args || [], value: input.value || 0n }) as `0x${string}` & { length: 66 };
-  const receipt = await client.waitForTransactionReceipt({ hash });
+  const receipt = await client.waitForTransactionReceipt({ hash, status: FINALIZED_STATUS });
   const resultName = (receipt as { result_name?: string }).result_name;
   if (resultName && resultName !== "MAJORITY_AGREE") throw new Error(`Transaction finalized with ${resultName}`);
   return { hash, receipt, releaseId: findReleaseId(receipt) };
