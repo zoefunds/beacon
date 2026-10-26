@@ -5,7 +5,7 @@ This document maps Beacon's advertised guarantees to inspectable source, executa
 ## Immutable reference
 
 - Repository: `https://github.com/zoefunds/beacon`
-- Review tag: `reviewer-evidence-2026-10-26`
+- Review tag: `reviewer-evidence-2026-10-26-v2`
 - Production frontend: `https://bea-con.vercel.app/`
 - Production Vercel deployment: `dpl_6YEoehRyiKWbUuqxnP9PtUXyZ5TW`
 - Deployed frontend Git tree: `1669a4e47d5bb6beb661de3fd97a2a4a9d08050c`
@@ -22,7 +22,7 @@ Run `npm run evidence` at the review tag to print the exact commit SHA, Git fron
 ```sh
 git clone https://github.com/zoefunds/beacon.git
 cd beacon
-git checkout reviewer-evidence-2026-10-26
+git checkout reviewer-evidence-2026-10-26-v2
 npm ci
 npm --prefix frontend ci
 python3 -m venv .venv
@@ -34,7 +34,7 @@ npm run evidence
 npm run evidence:live
 ```
 
-`npm run check` executes the protocol guard, direct contract suite, mutation controls, production frontend build, and frontend unit/component suite. `npm run evidence:live` independently fetches every cited transaction and the stored release from Studionet, fails unless every transaction is `FINALIZED / MAJORITY_AGREE`, and prints the resulting evidence as JSON. The expected totals at this reference are recorded by command output rather than copied into an unverifiable screenshot.
+`npm run check` executes the protocol guard, direct contract suite, mutation controls, production frontend build, and frontend unit/component suite. `npm run evidence:live` independently fetches every cited transaction and the stored release from Studionet, checks that creation escrowed exactly 1 GEN, requires a validator majority for semantic assessment and certificate proposal, fails unless every transaction is `FINALIZED / MAJORITY_AGREE`, and prints the resulting evidence as JSON. The expected totals at this reference are recorded by command output rather than copied into an unverifiable screenshot.
 
 ## Implementation map
 
@@ -74,6 +74,7 @@ Release `#1` uses repository `octocat/Spoon-Knife`, branch `main`, commit `d0dd1
 
 | Transition | Finalized transaction |
 | --- | --- |
+| Create and fund agreement (1 GEN) | `0x45d6268f570fd120d2594ac89e2eec7831afed336aa7a710933112add5793097` |
 | Seal commit | `0x8133a445efb0405283c488e08ed1cb71eea6722d43bcde29ecb5cb1dfc0a36cd` |
 | Begin inventory | `0x84411ce81ec40436f70f269e8d24d1a4791c021a93a69e6afe2e5ba28319a944` |
 | Discover sealed tree | `0x1c5c78beebbadd67d823e5a5aa78ea725bcdaecb73928752298b2028c10a1464` |
@@ -83,7 +84,7 @@ Release `#1` uses repository `octocat/Spoon-Knife`, branch `main`, commit `d0dd1
 | Consensus component assessment | `0xbdda39c7df2b341e5d7adb6ef8ad5a5a2f3efcb2b2a28ea79f631d6b71635396` |
 | Propose certificate | `0xe20e354c3ae1de6fc1c6c7c9b70dedd16b2133dca2398c3b37505ac3e3edbc8e` |
 
-The stored coverage is `[1, 1, 1, 1, 0, 0]`, all blockers are empty, and the semantic outcome is `INDETERMINATE`. That is the expected fail-closed result for the fixture's broad obligation. Its 1 GEN escrow becomes sponsor-refundable at Unix time `1793617259` (2 November 2026, 12:00:59 WAT). No document claims this live withdrawal has happened before the timelock expires.
+The assessment transaction records three agreeing validator addresses, and the certificate transaction records a separate three-vote majority. The stored coverage is `[1, 1, 1, 1, 0, 0]`, all blockers are empty, and the semantic outcome is `INDETERMINATE`. That is the expected fail-closed result for the fixture's broad obligation. Its 1 GEN escrow becomes sponsor-refundable at Unix time `1793617259` (2 November 2026, 12:00:59 WAT). No document claims this live withdrawal has happened before the timelock expires.
 
 The production frontend can reproduce the live read at `https://bea-con.vercel.app/attestations?release=1`; the Vault at `https://bea-con.vercel.app/vault` reads pull-payment credit and submits `withdraw` directly to the same contract.
 

@@ -6,6 +6,7 @@ const { studionet } = require("genlayer-js/chains");
 
 const address = "0x9D9AeA8B2B3586AC4B5e36a1B7f646689C3dfa44";
 const transactions = {
+  openRelease: "0x45d6268f570fd120d2594ac89e2eec7831afed336aa7a710933112add5793097",
   seal: "0x8133a445efb0405283c488e08ed1cb71eea6722d43bcde29ecb5cb1dfc0a36cd",
   beginInventory: "0x84411ce81ec40436f70f269e8d24d1a4791c021a93a69e6afe2e5ba28319a944",
   discoverInventory: "0x1c5c78beebbadd67d823e5a5aa78ea725bcdaecb73928752298b2028c10a1464",
@@ -26,13 +27,25 @@ for (const [name, hash] of Object.entries(transactions)) {
   }
 }
 
+const opening = await client.request({ method: "eth_getTransactionByHash", params: [transactions.openRelease] });
+if (BigInt(opening.value) !== 10n ** 18n) throw new Error("opening transaction did not escrow exactly 1 GEN");
+
+const consensus = {};
+for (const name of ["assessComponent", "proposeCertificate"]) {
+  const transaction = await client.request({ method: "eth_getTransactionByHash", params: [transactions[name]] });
+  const votes = transaction.consensus_data?.votes || {};
+  const agree = Object.values(votes).filter(vote => vote === "agree").length;
+  if (agree < 3) throw new Error(`${name} does not contain a validator majority`);
+  consensus[name] = { agree, votes };
+}
+
 const release = JSON.parse(await client.readContract({ address, functionName: "get_release", args: [1n] }));
 const expectedCoverage = [1, 1, 1, 1, 0, 0];
 if (JSON.stringify(release.certificate?.coverage) !== JSON.stringify(expectedCoverage)) throw new Error("unexpected release coverage");
 if (release.certificate?.outcome !== "INDETERMINATE") throw new Error("unexpected release outcome");
 if (release.blockers?.length !== 0) throw new Error("live release has blockers");
 
-console.log(JSON.stringify({ contract: address, transactions: checked, release: {
+console.log(JSON.stringify({ contract: address, transactions: checked, openingEscrowWei: String(opening.value), consensus, release: {
   id: release.id,
   state: release.state,
   outcome: release.certificate.outcome,
