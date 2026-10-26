@@ -1,3 +1,4 @@
+import base64
 import json
 import sys
 from pathlib import Path
@@ -116,11 +117,62 @@ def test_indeterminate_release_becomes_refundable(direct_deploy, direct_vm, term
     contract = direct_deploy(Path("contract/contracts/beacon.py"))
     open_release(contract, direct_vm, terms)
     item = json.loads(contract.get_release(1))
-    item.update({"state": "REVIEW", "certificate": {"outcome": "INDETERMINATE"}, "indeterminate_until": 1})
+    item.update({"state": "REVIEW", "certificate": {"outcome": "INDETERMINATE"}, "indeterminate_until": 1791453600})
     contract.releases[1] = json.dumps(item)
-    set_time(direct_vm, "2026-10-06T10:00:00Z")
+    set_time(direct_vm, "2026-10-08T09:59:59Z")
+    with pytest.raises(Exception):
+        contract.refund_indeterminate(1)
+    assert int(contract.get_balance(terms["sponsor"])) == 0
+    set_time(direct_vm, "2026-10-08T10:00:00Z")
     assert contract.refund_indeterminate(1) == "REFUNDED"
     assert int(contract.get_balance(terms["sponsor"])) == 2 * WEI
+
+
+def test_missing_or_mismatched_blob_fails_closed(direct_deploy, direct_vm, terms):
+    contract = direct_deploy(Path("contract/contracts/beacon.py"))
+    open_release(contract, direct_vm, terms)
+    item = json.loads(contract.get_release(1))
+    item.update({"state": "MATERIALIZED", "inventory_count": 1, "materialized_count": 0})
+    contract.releases[1] = json.dumps(item)
+    contract.entries["1:entry:0"] = json.dumps({"path": "src/a.py", "blob": "a" * 40, "size": 4, "class": "TEXT", "status": "PENDING"})
+    module = sys.modules[contract.__class__.__module__]
+    original = module.read_json
+    module.read_json = lambda _url: {"content": base64.b64encode(b"nope").decode()}
+    try:
+        assert contract.materialize(1, 0) == "BLOCKED"
+    finally:
+        module.read_json = original
+    stored = json.loads(contract.get_release(1))
+    assert stored["materialized_count"] == 1
+    assert stored["blockers"] == ["blob_verification_failed"]
+
+
+def test_unsupported_content_cannot_accept(direct_deploy, direct_vm, terms):
+    contract = direct_deploy(Path("contract/contracts/beacon.py"))
+    open_release(contract, direct_vm, terms)
+    item = json.loads(contract.get_release(1))
+    item.update({"state": "MATERIALIZED", "inventory_count": 1, "materialized_count": 0})
+    contract.releases[1] = json.dumps(item)
+    contract.entries["1:entry:0"] = json.dumps({"path": "src/image.png", "blob": "a" * 40, "size": 4, "class": "BINARY", "status": "PENDING"})
+    assert contract.materialize(1, 0) == "classified"
+    assert json.loads(contract.build_review_graph(1)) == {"components": 1, "edges": 0}
+    assert json.loads(contract.assess_component(1, 0))["result"] == "BLOCKED"
+    certificate = json.loads(contract.propose(1))
+    assert certificate["outcome"] == "INDETERMINATE"
+    assert certificate["blockers"] == ["non_text_requires_explicit_attestation"]
+
+
+def test_exhausted_import_budget_cannot_accept(direct_deploy, direct_vm, terms):
+    contract = direct_deploy(Path("contract/contracts/beacon.py"))
+    open_release(contract, direct_vm, terms)
+    item = json.loads(contract.get_release(1))
+    item.update({"state": "MATERIALIZED", "inventory_count": 1, "materialized_count": 1})
+    contract.releases[1] = json.dumps(item)
+    imports = "\n".join(f'import "./missing-{index}";' for index in range(33))
+    contract.entries["1:entry:0"] = json.dumps({"path": "src/a.ts", "blob": "a" * 40, "size": len(imports), "class": "TEXT", "status": "VERIFIED", "text": imports})
+    contract.build_review_graph(1)
+    stored = json.loads(contract.get_release(1))
+    assert "import_cap:src/a.ts" in stored["blockers"]
 
 
 def test_rejection_refunds_sponsor_and_withdraw_uses_checks_effects(direct_deploy, direct_vm, terms):

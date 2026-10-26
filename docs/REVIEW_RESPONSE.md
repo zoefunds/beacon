@@ -7,12 +7,22 @@ This guide answers the implementation, consensus, financial-safety, and deployme
 | Artifact | Reference |
 | --- | --- |
 | Repository | `https://github.com/zoefunds/beacon` |
-| Immutable review tag | `reviewer-evidence-2026-10-26-v6` |
+| Immutable review tag | `reviewer-evidence-2026-10-26-v7` |
 | Production frontend | `https://bea-con.vercel.app/` |
 | Vercel deployment | `dpl_CnCy9Wbyus4StJBV2YTDyn3KU4Ei` |
 | Studionet contract | `0x48629d95C2b1e51790d12b3E55108e5902727D4c` |
 | Deployment transaction | `0xce6f6c496d144c1fdd6f8134ab45d4cff7081913b0c78e04881058565ecfa8d0` |
 | Deployed source digest | `abeb2fd173aaf01edb98c9046ecb708ed38b5177f87097efdd0e362b56d2a7a0` |
+
+Direct public source links:
+
+- [Intelligent Contract](https://github.com/zoefunds/beacon/blob/reviewer-evidence-2026-10-26-v7/contract/contracts/beacon.py)
+- [Direct lifecycle and adversarial tests](https://github.com/zoefunds/beacon/blob/reviewer-evidence-2026-10-26-v7/contract/tests/direct/test_lifecycle.py)
+- [Protocol source guards](https://github.com/zoefunds/beacon/blob/reviewer-evidence-2026-10-26-v7/contract/tests/test_source_guards.py)
+- [Mutation controls](https://github.com/zoefunds/beacon/blob/reviewer-evidence-2026-10-26-v7/contract/tests/mutation/run.py)
+- [Frontend release monitor](https://github.com/zoefunds/beacon/blob/reviewer-evidence-2026-10-26-v7/frontend/components/ReleaseMonitor.tsx)
+- [Finality-aware frontend client](https://github.com/zoefunds/beacon/blob/reviewer-evidence-2026-10-26-v7/frontend/lib/beacon-client.ts)
+- [Executable Studionet verifier](https://github.com/zoefunds/beacon/blob/reviewer-evidence-2026-10-26-v7/scripts/verify-studionet.mjs)
 
 The deployed contract record identifies the 33,707-byte `contract/contracts/beacon.py` payload by SHA-256 digest. `npm run evidence` independently hashes the checked-out source and prints that digest together with the exact Git commit and deployment identifiers. `npm run evidence:live` then verifies the cited deployment and lifecycle transactions against Studionet.
 
@@ -49,13 +59,21 @@ Release `#2` proves the certificate path. Exactly 1 GEN was deposited in the ope
 | Premature or duplicate settlement | `test_finalize_cannot_pay_early_or_twice`; live release `#2` |
 | Rejected payout routing | `test_rejection_refunds_sponsor_and_withdraw_uses_checks_effects` |
 | Double withdrawal | same direct test; live releases `#1` and `#2` |
+| Seven-day indeterminate recovery | `test_indeterminate_release_becomes_refundable` rejects the call one second early and succeeds at the exact deadline |
+| Missing or mismatched blob | `test_missing_or_mismatched_blob_fails_closed` records `blob_verification_failed` |
+| Unsupported content | `test_unsupported_content_cannot_accept` produces an `INDETERMINATE` certificate with an explicit blocker |
+| Exhausted import budget | `test_exhausted_import_budget_cannot_accept` records `import_cap:src/a.ts` |
+
+## Frontend state correspondence
+
+The production [attestation view for release #2](https://bea-con.vercel.app/attestations?release=2) reads the active contract and renders its `REJECTED` terminal state, immutable seal, coverage, blockers, inventory, components, dependency edges, challenge record, certificate roots, and finalized transaction hash. The [vault](https://bea-con.vercel.app/vault) reads connected-wallet contract credit and disables withdrawal when the balance is zero. `writeBeacon` waits specifically for `FINALIZED` and rejects any consensus-bearing receipt whose result is not `MAJORITY_AGREE` before either page displays a successful write.
 
 ## One-command verification
 
 ```sh
 git clone https://github.com/zoefunds/beacon.git
 cd beacon
-git checkout reviewer-evidence-2026-10-26-v6
+git checkout reviewer-evidence-2026-10-26-v7
 npm ci
 npm --prefix frontend ci
 python3 -m venv .venv
@@ -66,6 +84,7 @@ npm --prefix frontend audit --omit=dev
 npm run evidence
 npm run evidence:live
 npm run evidence:frontend
+npm run evidence:public
 ```
 
 The local suite is authoritative and reproducible without privileged credentials. The live verifier is read-only. It fails on a non-finalized transaction, missing validator agreement, altered seal, incorrect certificate roots or coverage, incorrect escrow routing, a non-credited transfer, or any repeated transfer.

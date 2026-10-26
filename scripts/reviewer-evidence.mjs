@@ -28,13 +28,15 @@ const evidence = {
   verificationCommands: [
     "npm ci",
     "npm --prefix frontend ci",
-    "python -m pip install -r contract/requirements.txt",
+    "python3 -m venv .venv",
+    ".venv/bin/python -m pip install -r contract/requirements.txt",
     "npm run check",
     "genvm-lint contract/contracts/beacon.py",
     "npm --prefix frontend audit --omit=dev",
     "npm run evidence",
     "npm run evidence:live",
     "npm run evidence:frontend",
+    "npm run evidence:public",
   ],
   liveSettlementRelease1: {
     repo: "octocat/Spoon-Knife",
@@ -78,11 +80,6 @@ const evidence = {
       transfer: "0xe15f2996e6def7199ab0bd5fc1fb83b20b6e85a7be30b298478f40f9ae8908aa",
       secondWithdraw: "0xaa1b25028cf9b2989113c5c9f01375fbc693a9d6c6859bcff81003ffef3cf3fb",
     },
-  },
-  nondeterministicConsensusReference: {
-    contract: "0x9D9AeA8B2B3586AC4B5e36a1B7f646689C3dfa44",
-    assessComponent: "0xbdda39c7df2b341e5d7adb6ef8ad5a5a2f3efcb2b2a28ea79f631d6b71635396",
-    proposeCertificate: "0xe20e354c3ae1de6fc1c6c7c9b70dedd16b2133dca2398c3b37505ac3e3edbc8e",
   },
 };
 

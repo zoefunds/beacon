@@ -5,12 +5,13 @@
   "scripts": {
     "frontend:build": "npm --prefix frontend run build",
     "frontend:test": "npm --prefix frontend run test",
-    "contract:test": "(.venv/bin/python -m pytest contract/tests -q 2>/dev/null || python3 -m pytest contract/tests -q)",
-    "contract:mutation": "(.venv/bin/python contract/tests/mutation/run.py 2>/dev/null || python3 contract/tests/mutation/run.py)",
+    "contract:test": "node scripts/run-python.mjs -m pytest contract/tests -q",
+    "contract:mutation": "node scripts/run-python.mjs contract/tests/mutation/run.py",
     "check:protocol": "node scripts/audit-protocol.mjs",
     "check": "npm run check:protocol && npm run contract:test && npm run contract:mutation && npm run frontend:build && npm run frontend:test",
     "evidence": "node scripts/reviewer-evidence.mjs",
     "evidence:live": "node scripts/verify-studionet.mjs",
-    "evidence:frontend": "node scripts/verify-production.mjs"
+    "evidence:frontend": "node scripts/verify-production.mjs",
+    "evidence:public": "node scripts/verify-public-repo.mjs"
   }
 }

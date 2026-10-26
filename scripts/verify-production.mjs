@@ -1,5 +1,5 @@
 const origin = "https://bea-con.vercel.app";
-const routes = ["/", "/launch", "/attestations?release=1", "/vault"];
+const routes = ["/", "/launch", "/attestations?release=2", "/vault"];
 const pages = {};
 const scripts = new Set();
 
