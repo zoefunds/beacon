@@ -36,7 +36,7 @@ export default function Console() {
   return <main className="shell">
     <aside className="rail">
       <div className="brand"><span className="beacon">✦</span><span>beacon</span></div>
-      <nav><a className="active" href="#monitor">Mission control</a><a href="/launch">New release</a><a href="#evidence">Attestation log</a><a href="#vault">Vault</a></nav>
+      <nav><a className="active" href="#monitor">Mission control</a><a href="/launch">New release</a><a href={`/attestations${release ? `?release=${releaseId}` : ""}`}>Attestation log</a><a href="/vault">Vault</a></nav>
       <div className="network"><i></i><div><b>Studionet</b><small>live RPC</small></div></div>
     </aside>
     <section className="workbench">

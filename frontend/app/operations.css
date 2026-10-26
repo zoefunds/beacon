@@ -28,3 +28,18 @@ nav a:hover{color:#172925;background:#d7ff48;font-weight:800}
 .footerButton{margin-left:auto;border:1px solid #dfe1d8;background:#fffffb;padding:10px 14px;border-radius:7px;font:600 12px Manrope}
 .createdLink{display:inline-block;margin-top:12px;color:#2d7264;font:700 12px Manrope;text-decoration:underline}
 @media(max-width:900px){.evidenceGrid,.releaseData{grid-template-columns:1fr}}
+.utilityPage{max-width:1180px;margin:0 auto;padding:34px 28px 70px;min-height:100vh}
+.utilityHeader{padding-bottom:18px;border-bottom:1px solid #dfe1d8;font:11px 'DM Mono';letter-spacing:1px;color:#72807c}
+.utilityHeader a{color:#2d7264;font-weight:700}
+.utilityIntro{max-width:760px;margin:62px 0 34px}
+.utilityIntro h1{font-size:42px;letter-spacing:-1.8px;margin:8px 0 12px}
+.utilityIntro>p:last-child{color:#72807c;line-height:1.7}
+.vaultPagePanel{display:grid;gap:18px;max-width:760px}
+.vaultPagePanel>div{display:grid;gap:7px}
+.vaultPagePanel span{font:10px 'DM Mono';letter-spacing:1px;color:#72807c}
+.vaultPagePanel code{overflow-wrap:anywhere;color:#2d7264}
+.vaultPagePanel strong{font-size:34px}
+.vaultActions{display:flex!important;grid-template-columns:repeat(2,max-content);gap:10px!important}
+.vaultActions button{border:1px solid #14201e;border-radius:6px;padding:11px 15px;background:#14201e;color:white;font:700 12px Manrope}
+.vaultActions button:disabled{opacity:.4;cursor:not-allowed}
+@media(max-width:700px){.utilityPage{padding:24px 18px}.utilityIntro{margin-top:38px}.utilityIntro h1{font-size:32px}}
