@@ -181,6 +181,14 @@ def local_reference(source, reference, available):
     root = reference.split(".", 1)[0]
     return any(path == root + ".py" or path.startswith(root + "/") for path in available)
 
+@gl.evm.contract_interface
+class _Recipient:
+    class View:
+        pass
+
+    class Write:
+        pass
+
 class Beacon(gl.Contract):
     # Persistent maps must be declared as storage fields. Constructing them in
     # __init__ creates an ephemeral map in the current Studionet runtime.
@@ -494,7 +502,7 @@ class Beacon(gl.Contract):
     def withdraw(self) -> str:
         account = wallet(gl.message.sender_address); amount = int(self.balances[account]) if account in self.balances else 0
         if amount == 0: return "nothing_to_withdraw"
-        self.balances[account] = u256(0); gl.get_contract_at(Address(account)).emit_transfer(value=u256(amount)); return str(amount)
+        self.balances[account] = u256(0); _Recipient(Address(account)).emit_transfer(value=u256(amount)); return str(amount)
 
     @gl.public.view
     def get_release(self, release_id: u256) -> str:

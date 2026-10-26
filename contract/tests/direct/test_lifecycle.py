@@ -121,13 +121,13 @@ def test_rejection_refunds_sponsor_and_withdraw_uses_checks_effects(direct_deplo
     assert int(contract.get_balance(terms["sponsor"])) == 2 * WEI
     module = sys.modules[contract.__class__.__module__]
     transfers = []
-    original = module.gl.contract.get_at
-    module.gl.contract.get_at = lambda address: type("Receiver", (), {"emit_transfer": lambda self, value: transfers.append(int(value))})()
+    original = module._Recipient
+    module._Recipient = lambda address: type("Receiver", (), {"emit_transfer": lambda self, value: transfers.append(int(value))})()
     try:
         direct_vm.sender = terms["sponsor"]
         assert contract.withdraw() == str(2 * WEI)
     finally:
-        module.gl.contract.get_at = original
+        module._Recipient = original
     assert transfers == [2 * WEI]
     assert int(contract.get_balance(terms["sponsor"])) == 0
     assert contract.withdraw() == "nothing_to_withdraw"

@@ -54,6 +54,9 @@ def test_removing_baseline_ancestry_check_is_rejected():
 def test_removing_indeterminate_refund_is_rejected():
     assert mutation_is_rejected('def refund_indeterminate', 'def disabled_refund_indeterminate')
 
+def test_replacing_eoa_transfer_with_ic_call_is_rejected():
+    assert mutation_is_rejected('_Recipient(Address(account)).emit_transfer', 'gl.get_contract_at(Address(account)).emit_transfer')
+
 
 if __name__ == "__main__":
     tests = [
@@ -65,6 +68,7 @@ if __name__ == "__main__":
         test_removing_complete_seal_validation_is_rejected,
         test_removing_baseline_ancestry_check_is_rejected,
         test_removing_indeterminate_refund_is_rejected,
+        test_replacing_eoa_transfer_with_ic_call_is_rejected,
     ]
     for test in tests:
         test()

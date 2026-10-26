@@ -32,9 +32,10 @@ genvm-lint contract/contracts/beacon.py
 npm --prefix frontend audit --omit=dev
 npm run evidence
 npm run evidence:live
+npm run evidence:frontend
 ```
 
-`npm run check` executes the protocol guard, direct contract suite, mutation controls, production frontend build, and frontend unit/component suite. `npm run evidence:live` independently fetches every cited transaction and the stored release from Studionet, checks that creation escrowed exactly 1 GEN, requires a validator majority for semantic assessment and certificate proposal, fails unless every transaction is `FINALIZED / MAJORITY_AGREE`, and prints the resulting evidence as JSON. The expected totals at this reference are recorded by command output rather than copied into an unverifiable screenshot.
+`npm run check` executes the protocol guard, direct contract suite, mutation controls, production frontend build, and frontend unit/component suite. `npm run evidence:live` independently fetches every cited transaction and the stored release from Studionet, checks that creation escrowed exactly 1 GEN, requires a validator majority for semantic assessment and certificate proposal, fails unless every transaction is `FINALIZED / MAJORITY_AGREE`, and prints the resulting evidence as JSON. `npm run evidence:frontend` fetches every production route and deployed JavaScript bundle and fails unless the active contract, finality handling, complete lifecycle operation surface, dedicated evidence/vault pages, and seven-day refund copy are present. The expected totals at this reference are recorded by command output rather than copied into an unverifiable screenshot.
 
 ## Implementation map
 

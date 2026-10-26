@@ -54,6 +54,9 @@ def test_semantic_result_is_decided_by_validator_consensus():
 def test_first_balance_credit_and_empty_withdraw_check_membership():
     text = source()
     assert 'current = int(self.balances[account]) if account in self.balances else 0' in text
+    assert "@gl.evm.contract_interface" in text
+    assert "_Recipient(Address(account)).emit_transfer" in text
+    assert "gl.get_contract_at(Address(account)).emit_transfer" not in text
 
 
 def test_seal_baseline_and_indeterminate_refund_fail_closed():

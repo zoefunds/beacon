@@ -34,6 +34,7 @@ const evidence = {
     "npm --prefix frontend audit --omit=dev",
     "npm run evidence",
     "npm run evidence:live",
+    "npm run evidence:frontend",
   ],
   liveRelease1: {
     repo: "octocat/Spoon-Knife",

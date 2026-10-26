@@ -10,6 +10,7 @@
     "check:protocol": "node scripts/audit-protocol.mjs",
     "check": "npm run check:protocol && npm run contract:test && npm run contract:mutation && npm run frontend:build && npm run frontend:test",
     "evidence": "node scripts/reviewer-evidence.mjs",
-    "evidence:live": "node scripts/verify-studionet.mjs"
+    "evidence:live": "node scripts/verify-studionet.mjs",
+    "evidence:frontend": "node scripts/verify-production.mjs"
   }
 }

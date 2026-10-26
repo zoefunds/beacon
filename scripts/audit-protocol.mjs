@@ -22,6 +22,8 @@ const required = [
   ["def challenge_certificate", "certificate challenge path"],
   ["def review_challenge", "challenge reassessment"],
   ["def refund_indeterminate", "bounded indeterminate refund path"],
+  ["@gl.evm.contract_interface", "EOA withdrawal transfer interface"],
+  ["_Recipient(Address(account)).emit_transfer", "EOA withdrawal dispatch"],
   ["if not valid_seal(seal)", "complete seal validation"],
   ["baseline_compare = read_json", "baseline ancestry verification"],
   ["inventory_already_discovered", "idempotent inventory discovery"],
