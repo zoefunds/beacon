@@ -7,14 +7,14 @@ This guide answers the implementation, consensus, financial-safety, and deployme
 | Artifact | Reference |
 | --- | --- |
 | Repository | `https://github.com/zoefunds/beacon` |
-| Immutable review tag | `reviewer-evidence-2026-10-26-v5` |
+| Immutable review tag | `reviewer-evidence-2026-10-26-v6` |
 | Production frontend | `https://bea-con.vercel.app/` |
 | Vercel deployment | `dpl_CnCy9Wbyus4StJBV2YTDyn3KU4Ei` |
 | Studionet contract | `0x48629d95C2b1e51790d12b3E55108e5902727D4c` |
 | Deployment transaction | `0xce6f6c496d144c1fdd6f8134ab45d4cff7081913b0c78e04881058565ecfa8d0` |
 | Deployed source digest | `abeb2fd173aaf01edb98c9046ecb708ed38b5177f87097efdd0e362b56d2a7a0` |
 
-Studionet returns a 33,707-byte source payload for the contract. `npm run evidence:live` hashes that payload and compares it with `contract/contracts/beacon.py`, so the deployment reference is tied to the reviewed implementation rather than only to an address.
+The deployed contract record identifies the 33,707-byte `contract/contracts/beacon.py` payload by SHA-256 digest. `npm run evidence` independently hashes the checked-out source and prints that digest together with the exact Git commit and deployment identifiers. `npm run evidence:live` then verifies the cited deployment and lifecycle transactions against Studionet.
 
 ## Seal and repository completeness
 
@@ -55,7 +55,7 @@ Release `#2` proves the certificate path. Exactly 1 GEN was deposited in the ope
 ```sh
 git clone https://github.com/zoefunds/beacon.git
 cd beacon
-git checkout reviewer-evidence-2026-10-26-v5
+git checkout reviewer-evidence-2026-10-26-v6
 npm ci
 npm --prefix frontend ci
 python3 -m venv .venv

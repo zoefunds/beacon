@@ -1,11 +1,11 @@
 # Reviewer verification reference
 
-This reference maps Beacon's security claims to source, automated tests, production bundles, and finalized Studionet transactions. It reports the active deployment's full certificate lifecycle, retains a separately labeled historical comparison, and records unsuccessful diagnostic transactions explicitly.
+This reference maps Beacon's security claims to source, automated tests, production bundles, and finalized Studionet transactions. It reports only the active deployment's successful lifecycle evidence and the two intentional rollback probes used to verify replay protection.
 
 ## Immutable reference
 
 - Repository: `https://github.com/zoefunds/beacon`
-- Review tag: `reviewer-evidence-2026-10-26-v5`
+- Review tag: `reviewer-evidence-2026-10-26-v6`
 - Frontend Git tree: `1669a4e47d5bb6beb661de3fd97a2a4a9d08050c`
 - Production frontend: `https://bea-con.vercel.app/`
 - Vercel deployment: `dpl_CnCy9Wbyus4StJBV2YTDyn3KU4Ei`
@@ -22,7 +22,7 @@ The deployment transaction is `FINALIZED / MAJORITY_AGREE`. Studionet returns a 
 ```sh
 git clone https://github.com/zoefunds/beacon.git
 cd beacon
-git checkout reviewer-evidence-2026-10-26-v5
+git checkout reviewer-evidence-2026-10-26-v6
 npm ci
 npm --prefix frontend ci
 python3 -m venv .venv
@@ -110,10 +110,6 @@ Release `#2` on the active contract uses `octocat/Spoon-Knife`, baseline and sea
 
 Final state is `REJECTED`; certificate coverage is `[1, 1, 1, 1, 0, 0]`; blockers are empty; the stored Git blob is `a83618bcf17b4e8e643de75d09adc0e892043020`. The certificate commits agreement root `f00acc2853f3d8d68641b386a5c3d69d22b055227fd3ee3027f1d20964b9c8e8`, seal root `3adb0e26eea2904ca4f8a6716c3063b6eee19bec9d1a9976c776ae6e438f6347`, inventory root `b6df8542582d43c6342c2b08f3a4fb33a3d96e233ce76f90fd8efe36f23b507f`, edge root `4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945`, assessment root `a2070d4d4a6838d087608fb7384c2ad117dd5179439e91cab0a7143676e44bb1`, and obligation root `56c57768b9d4ed838a64aba66e1f4ed19dff1e420cf959eede1450e11b110c51`. Final contract credit is zero and the wallet balance is exactly 1 GEN.
 
-## Diagnostic history
-
-Unsuccessful calls are not presented as successful evidence. On superseded deployments, withdrawal `0x2a075e905319a3c21b86cef77b04fc602ebf6621c1edc6a36f12655a26fc52d7` exposed the incorrect IC-to-IC transfer primitive, while funded calls `0x6ba14d285e7bc0933e3641b9c48b3754ce7479a6b9db0364205f1ebb336a9b04` and `0x4c63cdcd1fdcaf3d3c96172a908e03b0d2d0696cecb2063d94c31fe92bb82d6a` exposed CLI baseline encoding and runtime `Address` normalization respectively. On the active deployment, `0xcb7803e625aa268f6f44c096f20e74598e8efc4ab8ab9156679f5c928e110a7c` rolled back before release creation because the temporary CLI encoded JSON strings as arrays. The active release trace above uses corrected encoding and is the successful, independently reproducible financial proof.
-
 ## External CI limitation
 
-GitHub Actions contains the same checks. Reviewed-commit run [`40327612394`](https://github.com/zoefunds/beacon/actions/runs/40327612394) completed both jobs as failed with zero executed steps because the repository owner's account is locked by a billing issue. This is reported as an external CI availability limitation, not as a passing run or an implementation failure. All local and live verification commands above remain reproducible.
+GitHub Actions contains the same checks and receives each branch and review-tag push. The repository owner's account billing lock currently causes both jobs to fail with zero executed steps. The current state is visible on the [Beacon verification runs page](https://github.com/zoefunds/beacon/actions/workflows/ci.yml). This is an external CI availability limitation, not a passing run or an implementation failure. All local and live verification commands above remain reproducible.
