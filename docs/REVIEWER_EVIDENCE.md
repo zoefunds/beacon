@@ -5,7 +5,7 @@ This reference maps Beacon's security claims to source, automated tests, product
 ## Immutable reference
 
 - Repository: `https://github.com/zoefunds/beacon`
-- Review tag: `reviewer-evidence-2026-10-26-v7`
+- Review tag: `reviewer-evidence-2026-10-26-v8`
 - Frontend Git tree: `1669a4e47d5bb6beb661de3fd97a2a4a9d08050c`
 - Production frontend: `https://bea-con.vercel.app/`
 - Vercel deployment: `dpl_CnCy9Wbyus4StJBV2YTDyn3KU4Ei`
@@ -22,7 +22,7 @@ The deployment transaction is `FINALIZED / MAJORITY_AGREE`. Studionet returns a 
 ```sh
 git clone https://github.com/zoefunds/beacon.git
 cd beacon
-git checkout reviewer-evidence-2026-10-26-v7
+git checkout reviewer-evidence-2026-10-26-v8
 npm ci
 npm --prefix frontend ci
 python3 -m venv .venv

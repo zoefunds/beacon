@@ -14,7 +14,7 @@ Beacon is deployed as one GenLayer Intelligent Contract and a static browser fro
 | Explorer | `https://explorer-studio.genlayer.com` |
 | Contract | `0x48629d95C2b1e51790d12b3E55108e5902727D4c` |
 | Deployment transaction | `0xce6f6c496d144c1fdd6f8134ab45d4cff7081913b0c78e04881058565ecfa8d0` |
-| Reproducible review reference | `reviewer-evidence-2026-10-26-v7` |
+| Reproducible review reference | `reviewer-evidence-2026-10-26-v8` |
 | Deployed source commit | `afdf1de59fa5b3c04453315a2bbf5af19c7fb79e` |
 | Deployed source SHA-256 | `abeb2fd173aaf01edb98c9046ecb708ed38b5177f87097efdd0e362b56d2a7a0` |
 

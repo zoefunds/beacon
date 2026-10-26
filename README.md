@@ -2,6 +2,8 @@
 
 **A release-attestation protocol for consequential repository changes on GenLayer.**
 
+Reviewer starting point: [`REVIEWER_SUBMISSION.md`](REVIEWER_SUBMISSION.md). It contains the immutable reference, direct public source links, expected test results, and the complete Studionet transaction trace.
+
 Beacon holds GEN until a declared release is independently attested against a frozen repository baseline. Its central primitive is a **release seal**: the implementer selects a reachable commit *before* the deadline and validators bind that commit, its tree, and every in-scope path to the agreement. Nothing observed for the first time after the deadline can become the release under review.
 
 ## What makes an attestation complete
@@ -45,7 +47,7 @@ The release seal belongs before the deadline. Post-deadline callers merely advan
 - Network: GenLayer Studionet, chain ID `61999`
 - Contract: `0x48629d95C2b1e51790d12b3E55108e5902727D4c`
 - Deployment transaction: `0xce6f6c496d144c1fdd6f8134ab45d4cff7081913b0c78e04881058565ecfa8d0`
-- Reviewed implementation: tag `reviewer-evidence-2026-10-26-v7` (the tag resolves the exact immutable commit without self-referential documentation)
+- Reviewed implementation: tag `reviewer-evidence-2026-10-26-v8` (the tag resolves the exact immutable commit without self-referential documentation)
 
 The frontend reads this contract directly and asks the connected wallet to add or switch to Studionet when necessary. There is no custodial backend.
 
@@ -61,7 +63,7 @@ npm run check
 
 The browser console exposes every contract transition, waits for Studionet consensus before reporting success, renders the complete seal/certificate/inventory/component/edge record, and supports pull-payment withdrawals.
 
-The repository is public. Reviewers can inspect the [Intelligent Contract](https://github.com/zoefunds/beacon/blob/reviewer-evidence-2026-10-26-v7/contract/contracts/beacon.py), [direct contract tests](https://github.com/zoefunds/beacon/blob/reviewer-evidence-2026-10-26-v7/contract/tests/direct/test_lifecycle.py), [frontend integration](https://github.com/zoefunds/beacon/blob/reviewer-evidence-2026-10-26-v7/frontend/lib/beacon-client.ts), and [live verifier](https://github.com/zoefunds/beacon/blob/reviewer-evidence-2026-10-26-v7/scripts/verify-studionet.mjs) at the immutable review tag. `npm run evidence:public` checks these public raw files at the exact checked-out commit.
+The repository is public. Reviewers can inspect the [Intelligent Contract](https://github.com/zoefunds/beacon/blob/reviewer-evidence-2026-10-26-v8/contract/contracts/beacon.py), [direct contract tests](https://github.com/zoefunds/beacon/blob/reviewer-evidence-2026-10-26-v8/contract/tests/direct/test_lifecycle.py), [frontend integration](https://github.com/zoefunds/beacon/blob/reviewer-evidence-2026-10-26-v8/frontend/lib/beacon-client.ts), and [live verifier](https://github.com/zoefunds/beacon/blob/reviewer-evidence-2026-10-26-v8/scripts/verify-studionet.mjs) at the immutable review tag. `npm run evidence:public` checks these public raw files at the exact checked-out commit.
 
 The current verification baseline is 28 protocol guards, 33 contract tests, 10 mutation controls, and 15 frontend tests. `npm run check` also performs a production Next.js build. GenVM lint passes independently, and the production dependency audit reports no known vulnerabilities. The reviewer evidence includes finalized live transactions for both the unsealed-expiry path and a complete certificate path: pre-deadline seal, blocked late substitution, canonical inventory, byte materialization, graph construction, native semantic consensus, certificate finalization, withdrawal, and replay prevention.
 

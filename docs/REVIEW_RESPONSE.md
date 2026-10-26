@@ -7,7 +7,7 @@ This guide answers the implementation, consensus, financial-safety, and deployme
 | Artifact | Reference |
 | --- | --- |
 | Repository | `https://github.com/zoefunds/beacon` |
-| Immutable review tag | `reviewer-evidence-2026-10-26-v7` |
+| Immutable review tag | `reviewer-evidence-2026-10-26-v8` |
 | Production frontend | `https://bea-con.vercel.app/` |
 | Vercel deployment | `dpl_CnCy9Wbyus4StJBV2YTDyn3KU4Ei` |
 | Studionet contract | `0x48629d95C2b1e51790d12b3E55108e5902727D4c` |
@@ -16,13 +16,13 @@ This guide answers the implementation, consensus, financial-safety, and deployme
 
 Direct public source links:
 
-- [Intelligent Contract](https://github.com/zoefunds/beacon/blob/reviewer-evidence-2026-10-26-v7/contract/contracts/beacon.py)
-- [Direct lifecycle and adversarial tests](https://github.com/zoefunds/beacon/blob/reviewer-evidence-2026-10-26-v7/contract/tests/direct/test_lifecycle.py)
-- [Protocol source guards](https://github.com/zoefunds/beacon/blob/reviewer-evidence-2026-10-26-v7/contract/tests/test_source_guards.py)
-- [Mutation controls](https://github.com/zoefunds/beacon/blob/reviewer-evidence-2026-10-26-v7/contract/tests/mutation/run.py)
-- [Frontend release monitor](https://github.com/zoefunds/beacon/blob/reviewer-evidence-2026-10-26-v7/frontend/components/ReleaseMonitor.tsx)
-- [Finality-aware frontend client](https://github.com/zoefunds/beacon/blob/reviewer-evidence-2026-10-26-v7/frontend/lib/beacon-client.ts)
-- [Executable Studionet verifier](https://github.com/zoefunds/beacon/blob/reviewer-evidence-2026-10-26-v7/scripts/verify-studionet.mjs)
+- [Intelligent Contract](https://github.com/zoefunds/beacon/blob/reviewer-evidence-2026-10-26-v8/contract/contracts/beacon.py)
+- [Direct lifecycle and adversarial tests](https://github.com/zoefunds/beacon/blob/reviewer-evidence-2026-10-26-v8/contract/tests/direct/test_lifecycle.py)
+- [Protocol source guards](https://github.com/zoefunds/beacon/blob/reviewer-evidence-2026-10-26-v8/contract/tests/test_source_guards.py)
+- [Mutation controls](https://github.com/zoefunds/beacon/blob/reviewer-evidence-2026-10-26-v8/contract/tests/mutation/run.py)
+- [Frontend release monitor](https://github.com/zoefunds/beacon/blob/reviewer-evidence-2026-10-26-v8/frontend/components/ReleaseMonitor.tsx)
+- [Finality-aware frontend client](https://github.com/zoefunds/beacon/blob/reviewer-evidence-2026-10-26-v8/frontend/lib/beacon-client.ts)
+- [Executable Studionet verifier](https://github.com/zoefunds/beacon/blob/reviewer-evidence-2026-10-26-v8/scripts/verify-studionet.mjs)
 
 The deployed contract record identifies the 33,707-byte `contract/contracts/beacon.py` payload by SHA-256 digest. `npm run evidence` independently hashes the checked-out source and prints that digest together with the exact Git commit and deployment identifiers. `npm run evidence:live` then verifies the cited deployment and lifecycle transactions against Studionet.
 
@@ -73,7 +73,7 @@ The production [attestation view for release #2](https://bea-con.vercel.app/atte
 ```sh
 git clone https://github.com/zoefunds/beacon.git
 cd beacon
-git checkout reviewer-evidence-2026-10-26-v7
+git checkout reviewer-evidence-2026-10-26-v8
 npm ci
 npm --prefix frontend ci
 python3 -m venv .venv

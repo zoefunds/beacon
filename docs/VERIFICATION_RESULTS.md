@@ -1,6 +1,6 @@
 # Verification results
 
-This record summarizes the reproducible verification run for `reviewer-evidence-2026-10-26-v7`. Commands are expected to exit nonzero on any failed assertion.
+This record summarizes the reproducible verification run for `reviewer-evidence-2026-10-26-v8`. Commands are expected to exit nonzero on any failed assertion.
 
 | Command | Verified result |
 | --- | --- |
