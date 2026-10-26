@@ -21,6 +21,7 @@ const evidence = {
   },
   frontend: {
     productionUrl: "https://bea-con.vercel.app/",
+    deploymentId: "dpl_6YEoehRyiKWbUuqxnP9PtUXyZ5TW",
     attestationLog: "https://bea-con.vercel.app/attestations?release=1",
     vault: "https://bea-con.vercel.app/vault",
   },

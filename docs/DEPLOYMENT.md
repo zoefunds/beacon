@@ -7,6 +7,8 @@ Beacon is deployed as one GenLayer Intelligent Contract and a static browser fro
 | Item | Value |
 | --- | --- |
 | Frontend | `https://bea-con.vercel.app/` |
+| Vercel deployment | `dpl_6YEoehRyiKWbUuqxnP9PtUXyZ5TW` |
+| Frontend Git tree | `1669a4e47d5bb6beb661de3fd97a2a4a9d08050c` |
 | Network | GenLayer Studionet (`61999`) |
 | RPC | `https://studio.genlayer.com/api` |
 | Explorer | `https://explorer-studio.genlayer.com` |

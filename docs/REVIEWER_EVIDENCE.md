@@ -7,13 +7,15 @@ This document maps Beacon's advertised guarantees to inspectable source, executa
 - Repository: `https://github.com/zoefunds/beacon`
 - Review tag: `reviewer-evidence-2026-10-26`
 - Production frontend: `https://bea-con.vercel.app/`
+- Production Vercel deployment: `dpl_6YEoehRyiKWbUuqxnP9PtUXyZ5TW`
+- Deployed frontend Git tree: `1669a4e47d5bb6beb661de3fd97a2a4a9d08050c`
 - GenLayer network: Studionet, chain ID `61999`
 - Intelligent Contract: `0x9D9AeA8B2B3586AC4B5e36a1B7f646689C3dfa44`
 - Deployment transaction: `0xb2a9fb59c2ba02dd11f58e577aa189d0e617688a46293bf94b35494a0e9d376a`
 - Contract source SHA-256: `c433900a59e726b7a02eb34d6350e5109eba3bbbc3e0068eab736524e3123631`
 - Contract source size: 33,552 bytes
 
-Run `npm run evidence` at the review tag to print the exact commit SHA, Git frontend-tree identifier, source digest, deployment identifiers, verification commands, and live trace as JSON. The tag resolves the self-reference problem of embedding a commit's own SHA inside that commit.
+Run `npm run evidence` at the review tag to print the exact commit SHA, Git frontend-tree identifier, source digest, deployment identifiers, verification commands, and live trace as JSON. The production deployment above was built from that exact frontend tree. The tag resolves the self-reference problem of embedding a commit's own SHA inside that commit.
 
 ## Reproduce locally
 
