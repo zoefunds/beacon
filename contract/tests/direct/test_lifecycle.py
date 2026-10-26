@@ -131,6 +131,7 @@ def test_rejection_refunds_sponsor_and_withdraw_uses_checks_effects(direct_deplo
     contract.releases[1] = json.dumps(item)
     assert contract.finalize(1) == "REJECTED"
     assert int(contract.get_balance(terms["sponsor"])) == 2 * WEI
+    assert int(contract.get_balance(terms["implementer"])) == 0
     module = sys.modules[contract.__class__.__module__]
     transfers = []
     original = module._Recipient

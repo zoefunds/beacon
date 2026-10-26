@@ -20,9 +20,11 @@ Beacon assumes public Git hosts return a consistent API response to validators u
 | First post-deadline caller selects evidence | `begin_inventory` only advances the already stored seal and never reads the moving branch. |
 | Duplicate discovery or transition calls | Discovery is explicitly one-shot; later methods require exact state and coverage counters. |
 | Validator prose differs | Consensus compares the bounded settlement category while retaining prose only as supporting evidence. |
+| Mechanical completeness mistaken for acceptance | Native semantic assessment is still mandatory; active release `#2` has complete deterministic coverage but a validator-consensus `REJECTED` certificate. |
+| Certificate replay | `finalize` requires the exact `REVIEW` state and moves to a terminal state before crediting; the active duplicate-finalize transaction rolls back. |
 
 GenLayer consensus is used for remote source facts and bounded semantic classifications. State transitions, graph construction, coverage accounting, SHA-256 commitments, refund timing, and settlement are deterministic.
 
 ## Residual assumptions
 
-Beacon currently supports public GitHub repositories through GitHub's canonical REST objects. Availability or rate limiting can delay progress, but malformed, missing, truncated, oversized, or inconsistent responses fail closed. The conservative import extractor covers supported local Python and JavaScript/TypeScript forms; syntax outside those bounded forms cannot yield positive settlement if it appears to be an unresolved local reference. Semantic classification may still be uncertain, which intentionally routes funds to the delayed sponsor-refund path rather than guessing.
+Beacon currently supports public GitHub repositories through GitHub's canonical REST objects. Availability or rate limiting can delay progress, but malformed, missing, truncated, oversized, or inconsistent responses fail closed. The conservative import extractor covers supported local Python and JavaScript/TypeScript forms; syntax outside those bounded forms cannot yield positive settlement if it appears to be an unresolved local reference. Semantic classification may still reject or remain uncertain. Rejection refunds sponsors after the reciprocal challenge window; uncertainty intentionally routes funds to the delayed sponsor-refund path rather than guessing.

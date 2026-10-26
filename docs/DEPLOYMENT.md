@@ -14,7 +14,7 @@ Beacon is deployed as one GenLayer Intelligent Contract and a static browser fro
 | Explorer | `https://explorer-studio.genlayer.com` |
 | Contract | `0x48629d95C2b1e51790d12b3E55108e5902727D4c` |
 | Deployment transaction | `0xce6f6c496d144c1fdd6f8134ab45d4cff7081913b0c78e04881058565ecfa8d0` |
-| Deployed source reference | `reviewer-evidence-2026-10-26-v3` |
+| Deployed source reference | `reviewer-evidence-2026-10-26-v4` |
 | Deployed source commit | `afdf1de59fa5b3c04453315a2bbf5af19c7fb79e` |
 | Deployed source SHA-256 | `abeb2fd173aaf01edb98c9046ecb708ed38b5177f87097efdd0e362b56d2a7a0` |
 
@@ -55,4 +55,6 @@ At the 26 October 2026 deployment audit, all local gates passed and npm reported
 
 ## Live lifecycle verification
 
-Release `#1` on the active contract proves the financial expiry path. It opened with exactly 1 GEN, expired only after its recorded deadline, credited the fixed sponsor, transferred exactly 1 GEN to that EOA, and rejected a duplicate payout by returning no triggered transfer on a second withdrawal. Every consensus-bearing transaction finalized with majority agreement; the direct EOA transfer finalized with `value_credited: true`. Exact hashes and an executable verifier are in `docs/REVIEWER_EVIDENCE.md` and `npm run evidence:live`.
+Release `#1` on the active contract proves the financial expiry path. It opened with exactly 1 GEN, expired only after its recorded deadline, credited the fixed sponsor, transferred exactly 1 GEN to that EOA, and rejected a duplicate payout by returning no triggered transfer on a second withdrawal.
+
+Release `#2` proves the complete certificate path on the same active deployment. It seals a commit before deadline, rejects a late substitution, inventories and materializes the full one-file fixture, builds its deterministic graph, obtains three agreeing validator votes for semantic assessment and certificate proposal, then routes the rejected certificate's escrow to the sponsor. A repeated finalization rolls back and a repeated withdrawal emits no transfer. Exact hashes, stored roots, balances, and executable assertions are in `docs/REVIEWER_EVIDENCE.md`, `docs/REVIEW_RESPONSE.md`, and `npm run evidence:live`.
