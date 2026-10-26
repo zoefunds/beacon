@@ -44,7 +44,7 @@ The release seal belongs before the deadline. Post-deadline callers merely advan
 - Network: GenLayer Studionet, chain ID `61999`
 - Contract: `0x48629d95C2b1e51790d12b3E55108e5902727D4c`
 - Deployment transaction: `0xce6f6c496d144c1fdd6f8134ab45d4cff7081913b0c78e04881058565ecfa8d0`
-- Reviewed implementation: tag `reviewer-evidence-2026-10-26-v4` (the tag resolves the exact immutable commit without self-referential documentation)
+- Reviewed implementation: tag `reviewer-evidence-2026-10-26-v5` (the tag resolves the exact immutable commit without self-referential documentation)
 
 The frontend reads this contract directly and asks the connected wallet to add or switch to Studionet when necessary. There is no custodial backend.
 
@@ -61,4 +61,4 @@ The browser console exposes every contract transition, waits for Studionet conse
 
 The current verification baseline is 28 protocol guards, 30 contract tests, 10 mutation controls, and 15 frontend tests. `npm run check` also performs a production Next.js build. GenVM lint passes independently, and the production dependency audit reports no known vulnerabilities. The reviewer evidence includes finalized live transactions for both the unsealed-expiry path and a complete certificate path: pre-deadline seal, blocked late substitution, canonical inventory, byte materialization, graph construction, native semantic consensus, certificate finalization, withdrawal, and replay prevention.
 
-GitHub Actions run [`40320191574`](https://github.com/zoefunds/beacon/actions/runs/40320191574) did not start either job because the repository owner's GitHub account is locked for a billing issue. It is documented as an external CI availability limitation, not as a passing test run.
+GitHub Actions run [`40327612394`](https://github.com/zoefunds/beacon/actions/runs/40327612394) did not execute any job steps because the repository owner's GitHub account is locked for a billing issue. It is documented as an external CI availability limitation, not as a passing test run.

@@ -14,7 +14,7 @@ Beacon is deployed as one GenLayer Intelligent Contract and a static browser fro
 | Explorer | `https://explorer-studio.genlayer.com` |
 | Contract | `0x48629d95C2b1e51790d12b3E55108e5902727D4c` |
 | Deployment transaction | `0xce6f6c496d144c1fdd6f8134ab45d4cff7081913b0c78e04881058565ecfa8d0` |
-| Deployed source reference | `reviewer-evidence-2026-10-26-v4` |
+| Deployed source reference | `reviewer-evidence-2026-10-26-v5` |
 | Deployed source commit | `afdf1de59fa5b3c04453315a2bbf5af19c7fb79e` |
 | Deployed source SHA-256 | `abeb2fd173aaf01edb98c9046ecb708ed38b5177f87097efdd0e362b56d2a7a0` |
 
@@ -51,7 +51,7 @@ genvm-lint contract/contracts/beacon.py
 npm --prefix frontend audit --omit=dev
 ```
 
-At the 26 October 2026 deployment audit, all local gates passed and npm reported zero production vulnerabilities. The latest workflow run for the reviewed implementation is [`40320191574`](https://github.com/zoefunds/beacon/actions/runs/40320191574). GitHub completed the workflow as failed without starting either job because the repository owner's account is locked for a billing issue. This is an external CI availability issue; it is not represented as a code failure or a passing CI result.
+At the 26 October 2026 deployment audit, all local gates passed and npm reported zero production vulnerabilities. Workflow run [`40327612394`](https://github.com/zoefunds/beacon/actions/runs/40327612394) targets the reviewed commit. GitHub completed both jobs as failed with zero executed steps because the repository owner's account is locked for a billing issue. This is an external CI availability issue; it is not represented as a code failure or a passing CI result.
 
 ## Live lifecycle verification
 

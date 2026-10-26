@@ -5,7 +5,7 @@ This reference maps Beacon's security claims to source, automated tests, product
 ## Immutable reference
 
 - Repository: `https://github.com/zoefunds/beacon`
-- Review tag: `reviewer-evidence-2026-10-26-v4`
+- Review tag: `reviewer-evidence-2026-10-26-v5`
 - Frontend Git tree: `1669a4e47d5bb6beb661de3fd97a2a4a9d08050c`
 - Production frontend: `https://bea-con.vercel.app/`
 - Vercel deployment: `dpl_CnCy9Wbyus4StJBV2YTDyn3KU4Ei`
@@ -22,7 +22,7 @@ The deployment transaction is `FINALIZED / MAJORITY_AGREE`. Studionet returns a 
 ```sh
 git clone https://github.com/zoefunds/beacon.git
 cd beacon
-git checkout reviewer-evidence-2026-10-26-v4
+git checkout reviewer-evidence-2026-10-26-v5
 npm ci
 npm --prefix frontend ci
 python3 -m venv .venv
@@ -116,4 +116,4 @@ Unsuccessful calls are not presented as successful evidence. On superseded deplo
 
 ## External CI limitation
 
-GitHub Actions contains the same checks. The latest reviewed run, [`40320191574`](https://github.com/zoefunds/beacon/actions/runs/40320191574), completed without starting either job because the repository owner's account is locked by a billing issue. This is reported as an external CI availability limitation, not as a passing run or an implementation failure. All local and live verification commands above remain reproducible.
+GitHub Actions contains the same checks. Reviewed-commit run [`40327612394`](https://github.com/zoefunds/beacon/actions/runs/40327612394) completed both jobs as failed with zero executed steps because the repository owner's account is locked by a billing issue. This is reported as an external CI availability limitation, not as a passing run or an implementation failure. All local and live verification commands above remain reproducible.

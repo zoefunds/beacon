@@ -7,7 +7,7 @@ This guide answers the implementation, consensus, financial-safety, and deployme
 | Artifact | Reference |
 | --- | --- |
 | Repository | `https://github.com/zoefunds/beacon` |
-| Immutable review tag | `reviewer-evidence-2026-10-26-v4` |
+| Immutable review tag | `reviewer-evidence-2026-10-26-v5` |
 | Production frontend | `https://bea-con.vercel.app/` |
 | Vercel deployment | `dpl_CnCy9Wbyus4StJBV2YTDyn3KU4Ei` |
 | Studionet contract | `0x48629d95C2b1e51790d12b3E55108e5902727D4c` |
@@ -55,7 +55,7 @@ Release `#2` proves the certificate path. Exactly 1 GEN was deposited in the ope
 ```sh
 git clone https://github.com/zoefunds/beacon.git
 cd beacon
-git checkout reviewer-evidence-2026-10-26-v4
+git checkout reviewer-evidence-2026-10-26-v5
 npm ci
 npm --prefix frontend ci
 python3 -m venv .venv
