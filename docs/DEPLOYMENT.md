@@ -12,11 +12,11 @@ Beacon is deployed as one GenLayer Intelligent Contract and a static browser fro
 ## Frontend
 
 1. Copy `.env.example` to `.env.local` inside `frontend/`.
-2. Set `NEXT_PUBLIC_BEACON_CONTRACT_ADDRESS` to `0xD02863C9044F17bd7A6471eB6c0f2b0b90Cb3c72`.
+2. Set `NEXT_PUBLIC_BEACON_CONTRACT_ADDRESS` to `0x9D9AeA8B2B3586AC4B5e36a1B7f646689C3dfa44`.
 3. Run `npm --prefix frontend run build`.
 
 The browser talks directly to the GenLayer RPC and the user’s EIP-1193 wallet. It contains no server wallet, API route, database, or background worker.
 
 ## Production
 
-The production frontend is served at `https://bea-con.vercel.app/`. The contract deployment transaction is `0xf194e6ed8af1cdb5a71a641ff9b5d40cd8850c2aa5b7fc81008e680dff21bf50`.
+The production frontend is served at `https://bea-con.vercel.app/`. The active contract deployment transaction is `0xb2a9fb59c2ba02dd11f58e577aa189d0e617688a46293bf94b35494a0e9d376a`; its source is commit `43c5472`.
