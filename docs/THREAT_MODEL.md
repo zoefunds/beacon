@@ -13,7 +13,9 @@ Beacon assumes public Git hosts return a consistent API response to validators u
 | Unsupported material | Classified blocker; it cannot disappear from coverage. |
 | Oversized repository | Bounded cursors and explicit caps; cap exhaustion cannot settle positively. |
 | Transfer re-entry | Credit balances are zeroed before pull transfer. |
+| EOA treated as an Intelligent Contract | Withdrawals use the explicit EOA transfer interface; the active live trace verifies `value_credited: true`. |
 | Missing balance key | First credits and empty withdrawals use explicit `TreeMap` membership checks. |
+| Runtime address type mismatch | Address-shaped calldata is normalized before validation and canonical storage. |
 | Non-decisive model result | Seven-day review followed by permissionless sponsor refund; no permanent escrow lock. |
 | First post-deadline caller selects evidence | `begin_inventory` only advances the already stored seal and never reads the moving branch. |
 | Duplicate discovery or transition calls | Discovery is explicitly one-shot; later methods require exact state and coverage counters. |

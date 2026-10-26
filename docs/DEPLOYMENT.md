@@ -15,6 +15,7 @@ Beacon is deployed as one GenLayer Intelligent Contract and a static browser fro
 | Contract | `0x48629d95C2b1e51790d12b3E55108e5902727D4c` |
 | Deployment transaction | `0xce6f6c496d144c1fdd6f8134ab45d4cff7081913b0c78e04881058565ecfa8d0` |
 | Deployed source reference | `reviewer-evidence-2026-10-26-v3` |
+| Deployed source commit | `afdf1de59fa5b3c04453315a2bbf5af19c7fb79e` |
 | Deployed source SHA-256 | `abeb2fd173aaf01edb98c9046ecb708ed38b5177f87097efdd0e362b56d2a7a0` |
 
 The source digest covers the exact 33,707-byte `contract/contracts/beacon.py` payload returned by Studionet. The deployment started with `next_id = 1` and no preloaded release or balance data.
@@ -28,8 +29,8 @@ The source digest covers the exact 33,707-byte `contract/contracts/beacon.py` pa
 
 ## Frontend
 
-1. Copy `.env.example` to `.env.local` inside `frontend/`.
-2. Set `NEXT_PUBLIC_BEACON_CONTRACT_ADDRESS` to `0x48629d95C2b1e51790d12b3E55108e5902727D4c`.
+1. Create `frontend/.env.local` for local development.
+2. Add `NEXT_PUBLIC_BEACON_CONTRACT_ADDRESS=0x48629d95C2b1e51790d12b3E55108e5902727D4c`.
 3. Run `npm --prefix frontend run build`.
 
 The browser talks directly to the GenLayer RPC and the user’s EIP-1193 wallet. It contains no server wallet, API route, database, or background worker.
@@ -50,7 +51,7 @@ genvm-lint contract/contracts/beacon.py
 npm --prefix frontend audit --omit=dev
 ```
 
-At the 26 October 2026 deployment audit, all local gates passed and npm reported zero production vulnerabilities. GitHub Actions is configured in `.github/workflows/`, but GitHub-hosted jobs are currently prevented from starting by an account billing lock. This is an external CI availability issue; it does not replace the required local gates.
+At the 26 October 2026 deployment audit, all local gates passed and npm reported zero production vulnerabilities. The latest workflow run for the reviewed implementation is [`40320191574`](https://github.com/zoefunds/beacon/actions/runs/40320191574). GitHub completed the workflow as failed without starting either job because the repository owner's account is locked for a billing issue. This is an external CI availability issue; it is not represented as a code failure or a passing CI result.
 
 ## Live lifecycle verification
 

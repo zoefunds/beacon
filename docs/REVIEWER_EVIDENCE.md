@@ -6,6 +6,8 @@ This reference maps Beacon's security claims to source, automated tests, product
 
 - Repository: `https://github.com/zoefunds/beacon`
 - Review tag: `reviewer-evidence-2026-10-26-v3`
+- Review commit: `afdf1de59fa5b3c04453315a2bbf5af19c7fb79e`
+- Frontend Git tree: `1669a4e47d5bb6beb661de3fd97a2a4a9d08050c`
 - Production frontend: `https://bea-con.vercel.app/`
 - Vercel deployment: `dpl_CnCy9Wbyus4StJBV2YTDyn3KU4Ei`
 - GenLayer network: Studionet, chain ID `61999`
@@ -91,4 +93,4 @@ Unsuccessful calls are not presented as successful evidence. On superseded deplo
 
 ## External CI limitation
 
-GitHub Actions contains the same checks, but GitHub currently refuses to start hosted jobs because the repository owner's account is locked by a billing issue. This is reported as an external CI availability limitation, not as a passing run. All local and live verification commands above remain reproducible.
+GitHub Actions contains the same checks. The latest reviewed run, [`40320191574`](https://github.com/zoefunds/beacon/actions/runs/40320191574), completed without starting either job because the repository owner's account is locked by a billing issue. This is reported as an external CI availability limitation, not as a passing run or an implementation failure. All local and live verification commands above remain reproducible.

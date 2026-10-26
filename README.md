@@ -42,6 +42,8 @@ The release seal belongs before the deadline. Post-deadline callers merely advan
 - Reviewer evidence: [`docs/REVIEWER_EVIDENCE.md`](docs/REVIEWER_EVIDENCE.md)
 - Network: GenLayer Studionet, chain ID `61999`
 - Contract: `0x48629d95C2b1e51790d12b3E55108e5902727D4c`
+- Deployment transaction: `0xce6f6c496d144c1fdd6f8134ab45d4cff7081913b0c78e04881058565ecfa8d0`
+- Reviewed implementation: commit `afdf1de59fa5b3c04453315a2bbf5af19c7fb79e`, tag `reviewer-evidence-2026-10-26-v3`
 
 The frontend reads this contract directly and asks the connected wallet to add or switch to Studionet when necessary. There is no custodial backend.
 
@@ -57,3 +59,5 @@ npm run check
 The browser console exposes every contract transition, waits for Studionet consensus before reporting success, renders the complete seal/certificate/inventory/component/edge record, and supports pull-payment withdrawals.
 
 The current verification baseline is 28 protocol guards, 30 contract tests, 10 mutation controls, and 15 frontend tests. `npm run check` also performs a production Next.js build. GenVM lint passes independently, and the production dependency audit reports no known vulnerabilities. The reviewer evidence includes finalized live transactions for an exact 1 GEN expiry refund, successful EOA withdrawal, and zero-credit second-withdrawal prevention.
+
+GitHub Actions run [`40320191574`](https://github.com/zoefunds/beacon/actions/runs/40320191574) did not start either job because the repository owner's GitHub account is locked for a billing issue. It is documented as an external CI availability limitation, not as a passing test run.

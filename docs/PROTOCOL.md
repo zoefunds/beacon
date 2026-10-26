@@ -23,7 +23,7 @@ Positive release requires exact coverage equality: all inventory entries materia
 
 For a provisional acceptance, sponsors may challenge a committed entry during the review window. For a provisional rejection, the implementer has the reciprocal right. Reassessment uses the same sealed source evidence. A non-decisive assessment produces `INDETERMINATE`; after a seven-day review period, anyone may move its escrow into sponsor pull-payment balances.
 
-The acceptance/rejection challenge window is 20 minutes. `INDETERMINATE` certificates cannot be challenged or finalized as accepted/rejected; `refund_indeterminate` becomes available after exactly seven days. Settlement, expiry, and indeterminate recovery credit internal balances first. Each beneficiary withdraws that credit separately, and the balance is zeroed before transfer.
+The acceptance/rejection challenge window is 20 minutes. `INDETERMINATE` certificates cannot be challenged or finalized as accepted/rejected; `refund_indeterminate` becomes available after exactly seven days. Settlement, expiry, and indeterminate recovery credit internal balances first. Each beneficiary withdraws that credit separately, and the balance is zeroed before transfer. Withdrawals use GenLayer's EOA transfer interface rather than an Intelligent-Contract call; an empty or repeated withdrawal returns without emitting another transfer.
 
 ## Operational bounds
 
@@ -46,5 +46,7 @@ The minimum initial escrow is 1 GEN. A release deadline must be at least five mi
 ## Public contract interface
 
 Lifecycle writes are `open_release`, `sponsor`, `seal_release`, `begin_inventory`, `discover_inventory`, `close_inventory`, `materialize`, `build_review_graph`, `assess_component`, `review_edge`, `propose`, `challenge_certificate`, `review_challenge`, `finalize`, `expire_unsealed`, `refund_indeterminate`, and `withdraw`.
+
+`open_release` normalizes the GenLayer runtime `Address` representation before validating and storing the implementer. This keeps browser/SDK address-shaped calldata compatible with the canonical lowercase address used by later authorization checks.
 
 Read methods are `get_release`, `get_entry`, `get_edge`, `get_component`, `get_balance`, and `get_next_id`. JSON views preserve integer identifiers; the frontend parses release IDs as `bigint` so values beyond JavaScript's safe-integer range are not rounded.
