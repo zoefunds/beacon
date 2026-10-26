@@ -39,6 +39,7 @@ The release seal belongs before the deadline. Post-deadline callers merely advan
 - Frontend: [bea-con.vercel.app](https://bea-con.vercel.app/)
 - Attestation log: [bea-con.vercel.app/attestations](https://bea-con.vercel.app/attestations)
 - Pull-payment vault: [bea-con.vercel.app/vault](https://bea-con.vercel.app/vault)
+- Reviewer evidence: [`docs/REVIEWER_EVIDENCE.md`](docs/REVIEWER_EVIDENCE.md)
 - Network: GenLayer Studionet, chain ID `61999`
 - Contract: `0x9D9AeA8B2B3586AC4B5e36a1B7f646689C3dfa44`
 
@@ -55,4 +56,4 @@ npm run check
 
 The browser console exposes every contract transition, waits for Studionet consensus before reporting success, renders the complete seal/certificate/inventory/component/edge record, and supports pull-payment withdrawals.
 
-The current verification baseline is 25 protocol guards, 23 direct contract tests, 8 mutation controls, and 11 frontend tests. `npm run check` also performs a production Next.js build. GenVM lint passes independently, and the production dependency audit reports no known vulnerabilities.
+The current verification baseline is 25 protocol guards, 28 contract tests, 8 mutation controls, and 15 frontend tests. `npm run check` also performs a production Next.js build. GenVM lint passes independently, and the production dependency audit reports no known vulnerabilities.

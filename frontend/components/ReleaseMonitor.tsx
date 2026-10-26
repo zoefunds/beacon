@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   fetchBalance,
   fetchComponent,
@@ -51,6 +51,7 @@ export function ReleaseMonitor({ onRelease }: Props) {
   const [sponsorAmount, setSponsorAmount] = useState("1");
   const [challengeIndex, setChallengeIndex] = useState("0");
   const [challengeReason, setChallengeReason] = useState("");
+  const accountRef = useRef<`0x${string}` | null>(null);
 
   const numericId = useMemo(() => /^\d+$/.test(activeId) ? BigInt(activeId) : null, [activeId]);
 
@@ -69,12 +70,14 @@ export function ReleaseMonitor({ onRelease }: Props) {
       setEntries(entryValues.filter((item): item is IndexedEvidence => Boolean(item.value)));
       setComponents(componentValues.filter((item): item is IndexedEvidence => Boolean(item.value)));
       setEdges(edgeValues.filter((item): item is IndexedEvidence => Boolean(item.value)));
-      if (account) setBalance(await fetchBalance(account));
+      if (accountRef.current) setBalance(await fetchBalance(accountRef.current));
       if (announce) setMessage(`Live chain read · refreshed ${new Date().toLocaleTimeString()}`);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Unable to read the release record.");
     }
-  }, [account, onRelease]);
+  }, [onRelease]);
+
+  useEffect(() => { accountRef.current = account; }, [account]);
 
   useEffect(() => {
     if (numericId === null) return;

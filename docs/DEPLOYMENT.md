@@ -41,7 +41,7 @@ The deployed route map is:
 
 ## Verification gates
 
-Run `npm run check` from the repository root. The current suite contains 25 protocol guards, 23 direct contract tests, 8 mutation controls, and 11 frontend tests, followed by a production build. Also run:
+Run `npm run check` from the repository root. The current suite contains 25 protocol guards, 28 contract tests, 8 mutation controls, and 15 frontend tests, followed by a production build. Also run:
 
 ```sh
 genvm-lint contract/contracts/beacon.py

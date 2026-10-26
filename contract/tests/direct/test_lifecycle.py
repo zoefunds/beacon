@@ -130,6 +130,100 @@ def test_rejection_refunds_sponsor_and_withdraw_uses_checks_effects(direct_deplo
         module.gl.contract.get_at = original
     assert transfers == [2 * WEI]
     assert int(contract.get_balance(terms["sponsor"])) == 0
+    assert contract.withdraw() == "nothing_to_withdraw"
+    assert transfers == [2 * WEI]
+
+
+def test_finalize_cannot_pay_early_or_twice(direct_deploy, direct_vm, terms):
+    contract = direct_deploy(Path("contract/contracts/beacon.py"))
+    open_release(contract, direct_vm, terms)
+    item = json.loads(contract.get_release(1))
+    item.update({"state": "REVIEW", "certificate": {"outcome": "ACCEPTED"}, "challenge_until": 1893456000})
+    contract.releases[1] = json.dumps(item)
+    with pytest.raises(Exception):
+        contract.finalize(1)
+    assert int(contract.get_balance(terms["implementer"])) == 0
+    item["challenge_until"] = 0
+    contract.releases[1] = json.dumps(item)
+    assert contract.finalize(1) == "ACCEPTED"
+    assert int(contract.get_balance(terms["implementer"])) == 2 * WEI
+    with pytest.raises(Exception):
+        contract.finalize(1)
+    assert int(contract.get_balance(terms["implementer"])) == 2 * WEI
+
+
+def test_only_implementer_can_seal_and_challenge_roles_are_reciprocal(direct_deploy, direct_vm, terms):
+    contract = direct_deploy(Path("contract/contracts/beacon.py"))
+    open_release(contract, direct_vm, terms)
+    direct_vm.sender = terms["sponsor"]
+    with pytest.raises(Exception):
+        contract.seal_release(1, "b" * 40)
+    item = json.loads(contract.get_release(1))
+    item.update({"state": "REVIEW", "inventory_count": 1, "certificate": {"outcome": "ACCEPTED"}, "challenge_until": 1893456000})
+    contract.releases[1] = json.dumps(item)
+    contract.entries["1:entry:0"] = json.dumps({"path": "src/a.py", "status": "VERIFIED"})
+    direct_vm.sender = terms["implementer"]
+    with pytest.raises(Exception):
+        contract.challenge_certificate(1, 0, "implementer cannot challenge acceptance")
+    item["certificate"] = {"outcome": "REJECTED"}
+    contract.releases[1] = json.dumps(item)
+    direct_vm.sender = terms["sponsor"]
+    with pytest.raises(Exception):
+        contract.challenge_certificate(1, 0, "sponsor cannot challenge rejection")
+
+
+def test_truncated_inventory_fails_closed(direct_deploy, direct_vm, terms):
+    contract = direct_deploy(Path("contract/contracts/beacon.py"))
+    open_release(contract, direct_vm, terms)
+    item = json.loads(contract.get_release(1))
+    item.update({"state": "INVENTORY", "seal": {"tree": "b" * 40}, "inventory_discovered": False})
+    contract.releases[1] = json.dumps(item)
+    module = sys.modules[contract.__class__.__module__]
+    original = module.read_json
+    module.read_json = lambda _url: {"sha": "b" * 40, "truncated": True, "tree": []}
+    try:
+        assert contract.discover_inventory(1) == "tree_unavailable_or_truncated"
+    finally:
+        module.read_json = original
+    stored = json.loads(contract.get_release(1))
+    assert stored["inventory_count"] == 0
+    assert stored["blockers"] == ["incomplete_tree_inventory"]
+
+
+def test_unresolved_dependency_and_inconsistent_assessment_cannot_accept(direct_deploy, direct_vm, terms):
+    contract = direct_deploy(Path("contract/contracts/beacon.py"))
+    open_release(contract, direct_vm, terms)
+    item = json.loads(contract.get_release(1))
+    item.update({"state": "MATERIALIZED", "inventory_count": 1, "materialized_count": 1})
+    contract.releases[1] = json.dumps(item)
+    contract.entries["1:entry:0"] = json.dumps({"path": "src/a.ts", "blob": "a" * 40, "size": 24, "class": "TEXT", "status": "VERIFIED", "text": 'import "./missing";'})
+    assert json.loads(contract.build_review_graph(1)) == {"components": 1, "edges": 0}
+    module = sys.modules[contract.__class__.__module__]
+    original = module.result_from_model
+    module.result_from_model = lambda _prompt: None
+    try:
+        assert json.loads(contract.assess_component(1, 0))["result"] == "UNCERTAIN"
+    finally:
+        module.result_from_model = original
+    certificate = json.loads(contract.propose(1))
+    assert certificate["outcome"] == "INDETERMINATE"
+    assert certificate["blockers"] == ["unresolved_local_import:src/a.ts:./missing"]
+
+
+def test_incomplete_coverage_and_invalid_certificate_cannot_settle(direct_deploy, direct_vm, terms):
+    contract = direct_deploy(Path("contract/contracts/beacon.py"))
+    open_release(contract, direct_vm, terms)
+    item = json.loads(contract.get_release(1))
+    item.update({"state": "ATTESTING", "component_count": 1, "assessed_count": 0})
+    contract.releases[1] = json.dumps(item)
+    with pytest.raises(Exception):
+        contract.propose(1)
+    item.update({"state": "REVIEW", "certificate": {"outcome": "INDETERMINATE"}, "indeterminate_until": 1893456000})
+    contract.releases[1] = json.dumps(item)
+    with pytest.raises(Exception):
+        contract.finalize(1)
+    with pytest.raises(Exception):
+        contract.refund_indeterminate(1)
 
 
 def test_duplicate_inventory_discovery_is_rejected_before_remote_fetch(direct_deploy, direct_vm, terms):
