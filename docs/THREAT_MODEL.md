@@ -6,6 +6,7 @@ Beacon assumes public Git hosts return a consistent API response to validators u
 | --- | --- |
 | Branch moves after close | A validated pre-deadline release seal is the sole review source. |
 | Omitted dependency | Deterministic parsers build the mandatory local graph; semantic labels are additive. |
+| Model omits or invents identifiers | Models never select inventory paths, component membership, or dependency edges; those identifiers are constructed deterministically from sealed evidence. |
 | Import parser exhaustion | Per-file import and global edge caps become certificate blockers. |
 | Hidden unchanged input | The complete sealed tree is inventoried under scope; baseline ancestry and its tree hash are committed in the seal. |
 | Invalid or altered source | Blob payload and computed Git object SHA must match the inventory. |
@@ -14,5 +15,12 @@ Beacon assumes public Git hosts return a consistent API response to validators u
 | Transfer re-entry | Credit balances are zeroed before pull transfer. |
 | Missing balance key | First credits and empty withdrawals use explicit `TreeMap` membership checks. |
 | Non-decisive model result | Seven-day review followed by permissionless sponsor refund; no permanent escrow lock. |
+| First post-deadline caller selects evidence | `begin_inventory` only advances the already stored seal and never reads the moving branch. |
+| Duplicate discovery or transition calls | Discovery is explicitly one-shot; later methods require exact state and coverage counters. |
+| Validator prose differs | Consensus compares the bounded settlement category while retaining prose only as supporting evidence. |
 
 GenLayer consensus is used for remote source facts and bounded semantic classifications. State transitions, graph construction, coverage accounting, SHA-256 commitments, refund timing, and settlement are deterministic.
+
+## Residual assumptions
+
+Beacon currently supports public GitHub repositories through GitHub's canonical REST objects. Availability or rate limiting can delay progress, but malformed, missing, truncated, oversized, or inconsistent responses fail closed. The conservative import extractor covers supported local Python and JavaScript/TypeScript forms; syntax outside those bounded forms cannot yield positive settlement if it appears to be an unresolved local reference. Semantic classification may still be uncertain, which intentionally routes funds to the delayed sponsor-refund path rather than guessing.

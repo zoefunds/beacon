@@ -34,6 +34,16 @@ A certificate may also enter `CHALLENGED` before returning to review. Unsealed a
 
 The release seal belongs before the deadline. Post-deadline callers merely advance bounded, deterministic work over that seal.
 
+## Live deployment
+
+- Frontend: [bea-con.vercel.app](https://bea-con.vercel.app/)
+- Attestation log: [bea-con.vercel.app/attestations](https://bea-con.vercel.app/attestations)
+- Pull-payment vault: [bea-con.vercel.app/vault](https://bea-con.vercel.app/vault)
+- Network: GenLayer Studionet, chain ID `61999`
+- Contract: `0x9D9AeA8B2B3586AC4B5e36a1B7f646689C3dfa44`
+
+The frontend reads this contract directly and asks the connected wallet to add or switch to Studionet when necessary. There is no custodial backend.
+
 ## Local validation
 
 ```sh
@@ -44,3 +54,5 @@ npm run check
 ```
 
 The browser console exposes every contract transition, waits for Studionet consensus before reporting success, renders the complete seal/certificate/inventory/component/edge record, and supports pull-payment withdrawals.
+
+The current verification baseline is 25 protocol guards, 23 direct contract tests, 8 mutation controls, and 11 frontend tests. `npm run check` also performs a production Next.js build. GenVM lint passes independently, and the production dependency audit reports no known vulnerabilities.
