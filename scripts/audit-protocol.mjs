@@ -30,6 +30,7 @@ const required = [
   ["component_count\"] = min(len(ordered_groups), MAX_COMPONENTS)", "bounded graph components"],
   ["current = int(self.balances[account]) if account in self.balances else 0", "safe first balance credit"],
   ["self.balances[account] = u256(0)", "checks-effects before transfer"],
+  ["implementer_address = str(implementer)", "runtime address normalization"],
 ];
 const missing = required.filter(([needle]) => !source.includes(needle)).map(([, name]) => name);
 if (missing.length) {

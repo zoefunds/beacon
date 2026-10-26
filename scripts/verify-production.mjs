@@ -19,7 +19,7 @@ for (const url of scripts) {
 }
 
 const required = [
-  "0x9D9AeA8B2B3586AC4B5e36a1B7f646689C3dfa44",
+  "0x48629d95C2b1e51790d12b3E55108e5902727D4c",
   "FINALIZED",
   "seal_release",
   "sponsor",
@@ -51,7 +51,7 @@ console.log(JSON.stringify({
   scriptCount: scripts.size,
   contract: required[0],
   finalizedReceiptHandling: true,
-  lifecycleOperations: required.slice(2, 19),
+  lifecycleOperations: required.slice(2, 18),
   dedicatedAttestationAndVaultRoutes: true,
   correctedIndeterminateRefundCopy: true,
 }, null, 2));

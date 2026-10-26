@@ -59,6 +59,12 @@ def test_first_balance_credit_and_empty_withdraw_check_membership():
     assert "gl.get_contract_at(Address(account)).emit_transfer" not in text
 
 
+def test_open_release_normalizes_runtime_address_type():
+    text = source()
+    assert "implementer_address = str(implementer)" in text
+    assert '"implementer": implementer_address.lower()' in text
+
+
 def test_seal_baseline_and_indeterminate_refund_fail_closed():
     text = source()
     assert "if not valid_seal(seal)" in text

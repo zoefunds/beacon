@@ -7,17 +7,17 @@ Beacon is deployed as one GenLayer Intelligent Contract and a static browser fro
 | Item | Value |
 | --- | --- |
 | Frontend | `https://bea-con.vercel.app/` |
-| Vercel deployment | `dpl_6YEoehRyiKWbUuqxnP9PtUXyZ5TW` |
+| Vercel deployment | `dpl_CnCy9Wbyus4StJBV2YTDyn3KU4Ei` |
 | Frontend Git tree | `1669a4e47d5bb6beb661de3fd97a2a4a9d08050c` |
 | Network | GenLayer Studionet (`61999`) |
 | RPC | `https://studio.genlayer.com/api` |
 | Explorer | `https://explorer-studio.genlayer.com` |
-| Contract | `0x9D9AeA8B2B3586AC4B5e36a1B7f646689C3dfa44` |
-| Deployment transaction | `0xb2a9fb59c2ba02dd11f58e577aa189d0e617688a46293bf94b35494a0e9d376a` |
-| Deployed source commit | `43c5472` |
-| Deployed source SHA-256 | `c433900a59e726b7a02eb34d6350e5109eba3bbbc3e0068eab736524e3123631` |
+| Contract | `0x48629d95C2b1e51790d12b3E55108e5902727D4c` |
+| Deployment transaction | `0xce6f6c496d144c1fdd6f8134ab45d4cff7081913b0c78e04881058565ecfa8d0` |
+| Deployed source reference | `reviewer-evidence-2026-10-26-v3` |
+| Deployed source SHA-256 | `abeb2fd173aaf01edb98c9046ecb708ed38b5177f87097efdd0e362b56d2a7a0` |
 
-The source digest covers the exact 33,552-byte `contract/contracts/beacon.py` payload returned by Studionet. The deployment starts with `next_id = 1` and no preloaded release or balance data.
+The source digest covers the exact 33,707-byte `contract/contracts/beacon.py` payload returned by Studionet. The deployment started with `next_id = 1` and no preloaded release or balance data.
 
 ## Contract
 
@@ -29,7 +29,7 @@ The source digest covers the exact 33,552-byte `contract/contracts/beacon.py` pa
 ## Frontend
 
 1. Copy `.env.example` to `.env.local` inside `frontend/`.
-2. Set `NEXT_PUBLIC_BEACON_CONTRACT_ADDRESS` to `0x9D9AeA8B2B3586AC4B5e36a1B7f646689C3dfa44`.
+2. Set `NEXT_PUBLIC_BEACON_CONTRACT_ADDRESS` to `0x48629d95C2b1e51790d12b3E55108e5902727D4c`.
 3. Run `npm --prefix frontend run build`.
 
 The browser talks directly to the GenLayer RPC and the user’s EIP-1193 wallet. It contains no server wallet, API route, database, or background worker.
@@ -43,7 +43,7 @@ The deployed route map is:
 
 ## Verification gates
 
-Run `npm run check` from the repository root. The current suite contains 25 protocol guards, 28 contract tests, 8 mutation controls, and 15 frontend tests, followed by a production build. Also run:
+Run `npm run check` from the repository root. The current suite contains 28 protocol guards, 30 contract tests, 10 mutation controls, and 15 frontend tests, followed by a production build. Also run:
 
 ```sh
 genvm-lint contract/contracts/beacon.py
@@ -54,4 +54,4 @@ At the 26 October 2026 deployment audit, all local gates passed and npm reported
 
 ## Live lifecycle verification
 
-Release `#1` on the active contract exercised opening, sealing, complete tree discovery, materialization, graph construction, semantic assessment, and certificate proposal against `octocat/Spoon-Knife@d0dd1f61b33d64e29d8bc1372a94ef6a2fee76a9`. Its evidence coverage is `[1, 1, 1, 1, 0, 0]`, with no blockers. The semantic result was `INDETERMINATE`, so its 1 GEN sponsor escrow follows the designed seven-day refund path and becomes refundable after 2 November 2026 at 12:00:59 WAT. This time-stamped verification record is not seeded application data.
+Release `#1` on the active contract proves the financial expiry path. It opened with exactly 1 GEN, expired only after its recorded deadline, credited the fixed sponsor, transferred exactly 1 GEN to that EOA, and rejected a duplicate payout by returning no triggered transfer on a second withdrawal. Every consensus-bearing transaction finalized with majority agreement; the direct EOA transfer finalized with `value_credited: true`. Exact hashes and an executable verifier are in `docs/REVIEWER_EVIDENCE.md` and `npm run evidence:live`.

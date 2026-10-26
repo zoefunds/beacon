@@ -58,6 +58,10 @@ def test_replacing_eoa_transfer_with_ic_call_is_rejected():
     assert mutation_is_rejected('_Recipient(Address(account)).emit_transfer', 'gl.get_contract_at(Address(account)).emit_transfer')
 
 
+def test_removing_runtime_address_normalization_is_rejected():
+    assert mutation_is_rejected('implementer_address = str(implementer)', 'implementer_address = implementer')
+
+
 if __name__ == "__main__":
     tests = [
         test_removing_the_deadline_guard_is_rejected,
@@ -69,6 +73,7 @@ if __name__ == "__main__":
         test_removing_baseline_ancestry_check_is_rejected,
         test_removing_indeterminate_refund_is_rejected,
         test_replacing_eoa_transfer_with_ic_call_is_rejected,
+        test_removing_runtime_address_normalization_is_rejected,
     ]
     for test in tests:
         test()

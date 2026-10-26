@@ -36,6 +36,18 @@ def test_open_release_freezes_terms_and_escrow(direct_deploy, direct_vm, terms):
     assert stored["scope"] == ["src"]
 
 
+def test_open_release_normalizes_genlayer_address_arguments(direct_deploy, direct_vm, terms):
+    contract = direct_deploy(Path("contract/contracts/beacon.py"))
+    module = sys.modules[contract.__class__.__module__]
+    set_time(direct_vm, "2026-10-01T10:00:00Z")
+    direct_vm.sender, direct_vm.value = terms["sponsor"], 2 * WEI
+    contract.open_release(
+        terms["repo"], terms["ref"], terms["baseline"], module.Address(terms["implementer"]), "Address boundary",
+        '["Normalize the runtime address type."]', '["src"]', terms["seal_by"],
+    )
+    assert json.loads(contract.get_release(1))["implementer"] == terms["implementer"]
+
+
 def test_only_draft_state_accepts_new_sponsorship(direct_deploy, direct_vm, terms):
     contract = direct_deploy(Path("contract/contracts/beacon.py"))
     open_release(contract, direct_vm, terms)

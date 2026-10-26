@@ -233,7 +233,8 @@ class Beacon(gl.Contract):
     @gl.public.write.payable
     def open_release(self, repo: str, ref: str, baseline: str, implementer: str, title: str, obligations_json: str, scope_json: str, seal_by: int) -> str:
         if int(gl.message.value) < MIN_ESCROW: raise gl.vm.UserError("minimum_escrow")
-        if not repository(repo) or not sha(baseline) or not re.fullmatch(r"0x[0-9a-fA-F]{40}", implementer or ""): raise gl.vm.UserError("invalid_identity")
+        implementer_address = str(implementer)
+        if not repository(repo) or not sha(baseline) or not re.fullmatch(r"0x[0-9a-fA-F]{40}", implementer_address): raise gl.vm.UserError("invalid_identity")
         if not 1 <= len(ref.strip()) <= MAX_REF_CHARS or any(value in ref for value in ("..", "?", "#", "\x00")): raise gl.vm.UserError("invalid_ref")
         if not 1 <= len(title.strip()) <= MAX_TITLE_CHARS: raise gl.vm.UserError("invalid_title")
         if seal_by <= now() + 300: raise gl.vm.UserError("seal_time_too_soon")
@@ -241,7 +242,7 @@ class Beacon(gl.Contract):
         except Exception: raise gl.vm.UserError("invalid_obligations")
         if not isinstance(obligations, list) or not 1 <= len(obligations) <= MAX_OBLIGATIONS or any(not isinstance(x, str) or not x.strip() or len(x.strip()) > MAX_OBLIGATION_CHARS for x in obligations): raise gl.vm.UserError("invalid_obligations")
         release_id = self.next_id; self.next_id = u256(int(release_id) + 1)
-        item = {"id": int(release_id), "state": "DRAFT", "repo": repo, "ref": ref.strip(), "baseline": baseline.lower(), "implementer": implementer.lower(), "sponsors": {wallet(gl.message.sender_address): int(gl.message.value)}, "escrow": int(gl.message.value), "title": title.strip(), "obligations": [str(x).strip() for x in obligations], "scope": normalized_scope(scope_json), "seal_by": seal_by, "seal": None, "inventory_discovered": False, "inventory_count": 0, "materialized_count": 0, "component_count": 0, "assessed_count": 0, "edge_count": 0, "reviewed_edges": 0, "blockers": [], "challenge_until": 0, "indeterminate_until": 0, "challenge": None, "certificate": None}
+        item = {"id": int(release_id), "state": "DRAFT", "repo": repo, "ref": ref.strip(), "baseline": baseline.lower(), "implementer": implementer_address.lower(), "sponsors": {wallet(gl.message.sender_address): int(gl.message.value)}, "escrow": int(gl.message.value), "title": title.strip(), "obligations": [str(x).strip() for x in obligations], "scope": normalized_scope(scope_json), "seal_by": seal_by, "seal": None, "inventory_discovered": False, "inventory_count": 0, "materialized_count": 0, "component_count": 0, "assessed_count": 0, "edge_count": 0, "reviewed_edges": 0, "blockers": [], "challenge_until": 0, "indeterminate_until": 0, "challenge": None, "certificate": None}
         self._save(release_id, item)
         return canonical({"release_id": int(release_id), "state": "DRAFT"})
 
