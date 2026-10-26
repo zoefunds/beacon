@@ -16,9 +16,16 @@ MAX_BLOB_BYTES = 48000
 MAX_COMPONENTS = 96
 MAX_EDGES = 256
 CHALLENGE_SECONDS = 20 * 60
+INDETERMINATE_REFUND_SECONDS = 7 * 24 * 60 * 60
+MAX_REF_CHARS = 120
+MAX_TITLE_CHARS = 120
+MAX_OBLIGATION_CHARS = 1000
+MAX_SCOPE_PATH_CHARS = 240
+MAX_COMPONENT_SOURCE_CHARS = 30000
+MAX_IMPORTS_PER_FILE = 32
 
 TEXT_EXTENSIONS = {"py", "js", "jsx", "ts", "tsx", "json", "md", "yml", "yaml", "toml", "css", "html", "sh", "txt"}
-TERMINAL = {"ACCEPTED", "REJECTED", "EXPIRED"}
+TERMINAL = {"ACCEPTED", "REJECTED", "EXPIRED", "REFUNDED"}
 
 def canonical(value):
     return json.dumps(value, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
@@ -35,6 +42,9 @@ def wallet(value):
 
 def sha(value):
     return bool(re.fullmatch(r"[0-9a-fA-F]{40}", value or ""))
+
+def valid_seal(value):
+    return isinstance(value, dict) and all(sha(str(value.get(key, ""))) for key in ("commit", "tree", "baseline_tree", "observed_ref_head"))
 
 def repository(value):
     return bool(re.fullmatch(r"[A-Za-z0-9_.-]{1,100}/[A-Za-z0-9_.-]{1,100}", value or ""))
@@ -83,7 +93,7 @@ def result_from_model(prompt):
             if not isinstance(leaders_res, gl.vm.Return): return False
             leader_value = normalize(leaders_res.calldata)
             validator_value = leader()
-            return leader_value is not None and leader_value["result"] == validator_value["result"] and leader_value["statuses"] == validator_value["statuses"]
+            return leader_value is not None and leader_value["result"] == validator_value["result"]
         except Exception:
             return False
     try:
@@ -94,9 +104,9 @@ def result_from_model(prompt):
 def normalized_scope(raw):
     try: values = json.loads(raw)
     except Exception: raise gl.vm.UserError("invalid_scope")
-    if not isinstance(values, list) or not 1 <= len(values) <= MAX_SCOPE: raise gl.vm.UserError("invalid_scope")
-    values = sorted(set(str(v).strip().rstrip("/") for v in values))
-    if len(values) == 0 or any(not path_ok(v) for v in values): raise gl.vm.UserError("invalid_scope_path")
+    if not isinstance(values, list) or not 1 <= len(values) <= MAX_SCOPE or any(not isinstance(v, str) for v in values): raise gl.vm.UserError("invalid_scope")
+    values = sorted(set(v.strip().rstrip("/") for v in values))
+    if len(values) == 0 or any(not path_ok(v) or len(v) > MAX_SCOPE_PATH_CHARS for v in values): raise gl.vm.UserError("invalid_scope_path")
     return values
 
 def in_scope(path, scopes):
@@ -109,11 +119,27 @@ def import_targets(path, text):
     """A deliberately conservative parser: unresolved local-looking imports block acceptance."""
     found = []
     if extension(path) == "py":
-        for item in re.findall(r"(?:from|import)\s+([A-Za-z_][A-Za-z0-9_\.]*)", text): found.append(item.replace(".", "/"))
+        for module, names in re.findall(r"^\s*from\s+([.A-Za-z_][A-Za-z0-9_.]*)\s+import\s+([^\n#]+)", text, re.MULTILINE):
+            if module.strip("."):
+                found.append(module)
+            else:
+                for name in names.split(","):
+                    imported = name.strip().split()[0]
+                    if re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", imported): found.append(module + imported)
+        for clause in re.findall(r"^\s*import\s+([^\n#]+)", text, re.MULTILINE):
+            for name in clause.split(","):
+                module = name.strip().split()[0]
+                if re.fullmatch(r"[A-Za-z_][A-Za-z0-9_.]*", module): found.append(module)
     elif extension(path) in {"js", "jsx", "ts", "tsx"}:
-        for item in re.findall(r"(?:from\s*|import\s*\()\s*[\"']([^\"']+)[\"']", text):
-            if item.startswith("."): found.append(item)
-    return sorted(set(found))[:32]
+        patterns = [
+            r"(?:from\s*|import\s*\()\s*[\"']([^\"']+)[\"']",
+            r"\bimport\s*[\"']([^\"']+)[\"']",
+            r"\brequire\s*\(\s*[\"']([^\"']+)[\"']\s*\)",
+        ]
+        for pattern in patterns:
+            for item in re.findall(pattern, text):
+                if item.startswith("."): found.append(item)
+    return sorted(set(found))
 
 def resolve_local_import(source, reference, available):
     """Resolve a parser-produced local import against the sealed inventory.
@@ -123,7 +149,7 @@ def resolve_local_import(source, reference, available):
     unresolved/ambiguous result.
     """
     candidates = []
-    if reference.startswith("."):
+    if reference.startswith(".") and extension(source) != "py":
         base = source.rsplit("/", 1)[0] if "/" in source else ""
         parts = base.split("/") if base else []
         for bit in reference.split("/"):
@@ -135,10 +161,25 @@ def resolve_local_import(source, reference, available):
         stem = "/".join(parts)
         candidates = [stem, stem + ".ts", stem + ".tsx", stem + ".js", stem + ".jsx", stem + ".py", stem + "/index.ts", stem + "/index.tsx", stem + "/index.js", stem + "/__init__.py"]
     elif extension(source) == "py":
-        stem = reference.replace(".", "/")
+        if reference.startswith("."):
+            dots = len(reference) - len(reference.lstrip("."))
+            parts = source.rsplit("/", 1)[0].split("/") if "/" in source else []
+            for _ in range(max(0, dots - 1)):
+                if not parts: return None
+                parts.pop()
+            suffix = reference[dots:].replace(".", "/")
+            stem = "/".join(parts + ([suffix] if suffix else []))
+        else:
+            stem = reference.replace(".", "/")
         candidates = [stem + ".py", stem + "/__init__.py"]
     matches = [candidate for candidate in candidates if candidate in available]
     return matches[0] if len(matches) == 1 else None
+
+def local_reference(source, reference, available):
+    if reference.startswith("."): return True
+    if extension(source) != "py": return False
+    root = reference.split(".", 1)[0]
+    return any(path == root + ".py" or path.startswith(root + "/") for path in available)
 
 class Beacon(gl.Contract):
     # Persistent maps must be declared as storage fields. Constructing them in
@@ -155,11 +196,14 @@ class Beacon(gl.Contract):
 
     def _key(self, release_id, kind, index): return f"{int(release_id)}:{kind}:{index}"
     def _load(self, release_id):
+        if release_id not in self.releases: raise gl.vm.UserError("unknown_release")
         raw = self.releases[release_id]
         if not raw: raise gl.vm.UserError("unknown_release")
         return json.loads(raw)
     def _save(self, release_id, item): self.releases[release_id] = canonical(item)
-    def _credit(self, account, amount): self.balances[account] = u256(int(self.balances[account] or 0) + amount)
+    def _credit(self, account, amount):
+        current = int(self.balances[account]) if account in self.balances else 0
+        self.balances[account] = u256(current + amount)
     def _require(self, item, state):
         if item["state"] != state: raise gl.vm.UserError("invalid_state")
     def _seal_source(self, item, commit):
@@ -171,21 +215,25 @@ class Beacon(gl.Contract):
         tree = ((commit_data.get("commit") or {}).get("tree") or {}).get("sha", "").lower()
         head = ((branch.get("commit") or {}).get("sha") or "").lower()
         compare = read_json(f"https://api.github.com/repos/{repo}/compare/{commit}...{head}")
+        baseline_compare = read_json(f"https://api.github.com/repos/{repo}/compare/{item['baseline']}...{commit}")
         baseline_tree = str(((baseline_data.get("commit") or {}).get("tree") or {}).get("sha", "")).lower()
-        if str(commit_data.get("sha", "")).lower() != commit.lower() or str(baseline_data.get("sha", "")).lower() != item["baseline"] or not sha(tree) or not sha(baseline_tree): return None
+        if str(commit_data.get("sha", "")).lower() != commit.lower() or str(baseline_data.get("sha", "")).lower() != item["baseline"] or not sha(tree) or not sha(head) or not sha(baseline_tree): return None
         if not isinstance(compare, dict) or str(((compare.get("merge_base_commit") or {}).get("sha") or "")).lower() != commit.lower(): return None
+        if not isinstance(baseline_compare, dict) or str(((baseline_compare.get("merge_base_commit") or {}).get("sha") or "")).lower() != item["baseline"]: return None
         return {"commit": commit.lower(), "tree": tree, "baseline_tree": baseline_tree, "observed_ref_head": head}
 
     @gl.public.write.payable
     def open_release(self, repo: str, ref: str, baseline: str, implementer: str, title: str, obligations_json: str, scope_json: str, seal_by: int) -> str:
         if int(gl.message.value) < MIN_ESCROW: raise gl.vm.UserError("minimum_escrow")
         if not repository(repo) or not sha(baseline) or not re.fullmatch(r"0x[0-9a-fA-F]{40}", implementer or ""): raise gl.vm.UserError("invalid_identity")
+        if not 1 <= len(ref.strip()) <= MAX_REF_CHARS or any(value in ref for value in ("..", "?", "#", "\x00")): raise gl.vm.UserError("invalid_ref")
+        if not 1 <= len(title.strip()) <= MAX_TITLE_CHARS: raise gl.vm.UserError("invalid_title")
         if seal_by <= now() + 300: raise gl.vm.UserError("seal_time_too_soon")
         try: obligations = json.loads(obligations_json)
         except Exception: raise gl.vm.UserError("invalid_obligations")
-        if not isinstance(obligations, list) or not 1 <= len(obligations) <= MAX_OBLIGATIONS or any(not str(x).strip() for x in obligations): raise gl.vm.UserError("invalid_obligations")
+        if not isinstance(obligations, list) or not 1 <= len(obligations) <= MAX_OBLIGATIONS or any(not isinstance(x, str) or not x.strip() or len(x.strip()) > MAX_OBLIGATION_CHARS for x in obligations): raise gl.vm.UserError("invalid_obligations")
         release_id = self.next_id; self.next_id = u256(int(release_id) + 1)
-        item = {"id": int(release_id), "state": "DRAFT", "repo": repo, "ref": ref, "baseline": baseline.lower(), "implementer": implementer.lower(), "sponsors": {wallet(gl.message.sender_address): int(gl.message.value)}, "escrow": int(gl.message.value), "title": title[:120], "obligations": [str(x).strip() for x in obligations], "scope": normalized_scope(scope_json), "seal_by": seal_by, "seal": None, "inventory_count": 0, "materialized_count": 0, "component_count": 0, "assessed_count": 0, "edge_count": 0, "reviewed_edges": 0, "blockers": [], "challenge_until": 0, "challenge": None, "certificate": None}
+        item = {"id": int(release_id), "state": "DRAFT", "repo": repo, "ref": ref.strip(), "baseline": baseline.lower(), "implementer": implementer.lower(), "sponsors": {wallet(gl.message.sender_address): int(gl.message.value)}, "escrow": int(gl.message.value), "title": title.strip(), "obligations": [str(x).strip() for x in obligations], "scope": normalized_scope(scope_json), "seal_by": seal_by, "seal": None, "inventory_discovered": False, "inventory_count": 0, "materialized_count": 0, "component_count": 0, "assessed_count": 0, "edge_count": 0, "reviewed_edges": 0, "blockers": [], "challenge_until": 0, "indeterminate_until": 0, "challenge": None, "certificate": None}
         self._save(release_id, item)
         return canonical({"release_id": int(release_id), "state": "DRAFT"})
 
@@ -199,13 +247,14 @@ class Beacon(gl.Contract):
 
     @gl.public.write
     def seal_release(self, release_id: u256, commit: str) -> str:
-        item = self._load(release_id); self._require(item, "DRAFT")
+        item = self._load(release_id)
+        if item["state"] not in {"DRAFT", "SEALED"}: raise gl.vm.UserError("invalid_state")
         if wallet(gl.message.sender_address) != item["implementer"]: raise gl.vm.UserError("implementer_only")
         if now() >= item["seal_by"] or not sha(commit): raise gl.vm.UserError("seal_closed")
         def fetch_seal(): return canonical(self._seal_source(item, commit) or {})
         try: seal = json.loads(gl.eq_principle.strict_eq(fetch_seal))
         except Exception: seal = None
-        if seal is None: raise gl.vm.UserError("unverifiable_seal")
+        if not valid_seal(seal): raise gl.vm.UserError("unverifiable_seal")
         item["seal"] = seal; item["state"] = "SEALED"; self._save(release_id, item)
         return canonical(seal)
 
@@ -214,12 +263,13 @@ class Beacon(gl.Contract):
         item = self._load(release_id); self._require(item, "SEALED")
         if now() < item["seal_by"]: raise gl.vm.UserError("seal_window_open")
         # The sealed tree is frozen; post-deadline branch state is intentionally never fetched.
-        item["state"] = "INVENTORY"; item["cursor"] = ["", item["seal"]["tree"]]; self._save(release_id, item)
+        item["state"] = "INVENTORY"; item["cursor"] = ["", item["seal"]["tree"]]; item["inventory_discovered"] = False; self._save(release_id, item)
         return "inventory_started"
 
     @gl.public.write
     def discover_inventory(self, release_id: u256) -> str:
         item = self._load(release_id); self._require(item, "INVENTORY")
+        if item.get("inventory_discovered"): raise gl.vm.UserError("inventory_already_discovered")
         # The caller supplies no paths. The full sealed tree is fetched under consensus;
         # a truncated response cannot be mistaken for a complete release inventory.
         def fetch_tree():
@@ -231,26 +281,35 @@ class Beacon(gl.Contract):
             item["blockers"].append("incomplete_tree_inventory"); self._save(release_id, item); return "tree_unavailable_or_truncated"
         entries = tree.get("tree")
         if not isinstance(entries, list): item["blockers"].append("malformed_tree_inventory"); self._save(release_id, item); return "malformed_tree"
+        scope_hits = {scope: False for scope in item["scope"]}
         for entry in sorted(entries, key=lambda x: str((x or {}).get("path", ""))):
             if item["inventory_count"] >= MAX_PATHS: item["blockers"].append("inventory_cap"); break
             path = str((entry or {}).get("path", "")); kind = str((entry or {}).get("type", "")); blob = str((entry or {}).get("sha", "")).lower(); size = int((entry or {}).get("size", -1))
             if not in_scope(path, item["scope"]): continue
+            for scope in item["scope"]:
+                if path == scope or path.startswith(scope + "/"): scope_hits[scope] = True
             if not path_ok(path) or not in_scope(path, item["scope"]) or kind not in {"blob", "commit"}: item["blockers"].append("unsupported_inventory_entry"); continue
             index = item["inventory_count"]; classification = "TEXT" if kind == "blob" and extension(path) in TEXT_EXTENSIONS else ("BINARY" if kind == "blob" else "SUBMODULE")
             self.entries[self._key(release_id, "entry", index)] = canonical({"path": path, "blob": blob, "size": size, "class": classification, "status": "PENDING"})
             item["inventory_count"] += 1
+        for scope, found in scope_hits.items():
+            if not found: item["blockers"].append("missing_scope:" + scope)
+        item["inventory_discovered"] = True
         self._save(release_id, item); return canonical({"inventory_count": item["inventory_count"], "blockers": item["blockers"]})
 
     @gl.public.write
     def close_inventory(self, release_id: u256) -> str:
         item = self._load(release_id); self._require(item, "INVENTORY")
+        if not item.get("inventory_discovered"): raise gl.vm.UserError("inventory_not_discovered")
         if item["inventory_count"] == 0: item["blockers"].append("empty_inventory")
         item["state"] = "MATERIALIZED"; self._save(release_id, item); return "inventory_closed"
 
     @gl.public.write
     def materialize(self, release_id: u256, entry_index: int) -> str:
         item = self._load(release_id); self._require(item, "MATERIALIZED")
-        key = self._key(release_id, "entry", entry_index); entry = json.loads(self.entries[key] or "{}")
+        key = self._key(release_id, "entry", entry_index)
+        if key not in self.entries: raise gl.vm.UserError("invalid_entry")
+        entry = json.loads(self.entries[key] or "{}")
         if not entry or entry.get("status") != "PENDING": raise gl.vm.UserError("invalid_entry")
         if entry["class"] != "TEXT": entry["status"] = "CLASSIFIED"; item["materialized_count"] += 1; item["blockers"].append("non_text_requires_explicit_attestation"); self.entries[key] = canonical(entry); self._save(release_id, item); return "classified"
         def fetch_blob():
@@ -261,7 +320,8 @@ class Beacon(gl.Contract):
         try: raw = base64.b64decode(str(payload["content"]).replace("\n", ""), validate=True)
         except Exception: raw = b""
         if len(raw) != entry["size"] or len(raw) > MAX_BLOB_BYTES or blob_sha(raw) != entry["blob"]: item["blockers"].append("blob_verification_failed"); entry["status"] = "BLOCKED"
-        else: entry["status"] = "VERIFIED"; entry["text"] = raw.decode("utf-8", errors="replace"); item["materialized_count"] += 1
+        else: entry["status"] = "VERIFIED"; entry["text"] = raw.decode("utf-8", errors="replace")
+        item["materialized_count"] += 1
         self.entries[key] = canonical(entry); self._save(release_id, item); return entry["status"]
 
     @gl.public.write
@@ -275,37 +335,70 @@ class Beacon(gl.Contract):
             entries.append(entry)
         for entry in entries:
             if entry["status"] != "VERIFIED": continue
-            for target in import_targets(entry["path"], entry.get("text", "")):
+            targets = import_targets(entry["path"], entry.get("text", ""))
+            if len(targets) > MAX_IMPORTS_PER_FILE: item["blockers"].append("import_cap:" + entry["path"])
+            for target in targets[:MAX_IMPORTS_PER_FILE]:
                 # Local relative targets must resolve; a model cannot waive this condition.
                 resolved = resolve_local_import(entry["path"], target, paths)
                 # A relative JavaScript import must resolve. Python imports that
                 # don't map to the sealed tree are external dependencies; a
                 # Python name that has a local prefix but no unique target blocks.
-                if target.startswith(".") and not resolved:
+                if local_reference(entry["path"], target, paths) and not resolved:
                     item["blockers"].append("unresolved_local_import:" + entry["path"] + ":" + target)
                 elif resolved:
                     edges.append((entry["path"], resolved))
-        for index, edge in enumerate(sorted(set(edges))[:MAX_EDGES]): self.edges[self._key(release_id, "edge", index)] = canonical({"from": edge[0], "to": edge[1], "status": "PENDING"})
-        if len(edges) > MAX_EDGES: item["blockers"].append("edge_cap")
-        item["edge_count"] = min(len(set(edges)), MAX_EDGES); item["component_count"] = item["inventory_count"]; item["state"] = "ATTESTING"; self._save(release_id, item)
+        unique_edges = sorted(set(edges))
+        for index, edge in enumerate(unique_edges[:MAX_EDGES]): self.edges[self._key(release_id, "edge", index)] = canonical({"from": edge[0], "to": edge[1], "status": "PENDING"})
+        if len(unique_edges) > MAX_EDGES: item["blockers"].append("edge_cap")
+        parent = list(range(len(entries)))
+        def root(index):
+            while parent[index] != index:
+                parent[index] = parent[parent[index]]
+                index = parent[index]
+            return index
+        def join(left, right):
+            left_root, right_root = root(left), root(right)
+            if left_root != right_root: parent[max(left_root, right_root)] = min(left_root, right_root)
+        for source, target in unique_edges:
+            join(paths[source], paths[target])
+        groups = {}
+        for index in range(len(entries)):
+            component_root = root(index)
+            if component_root not in groups: groups[component_root] = []
+            groups[component_root].append(index)
+        ordered_groups = sorted(groups.values(), key=lambda group: entries[group[0]]["path"])
+        if len(ordered_groups) > MAX_COMPONENTS: item["blockers"].append("component_cap")
+        for index, group in enumerate(ordered_groups[:MAX_COMPONENTS]):
+            self.components[self._key(release_id, "component", index)] = canonical({"entries": group, "paths": [entries[item]["path"] for item in group], "status": "PENDING"})
+        item["edge_count"] = min(len(unique_edges), MAX_EDGES); item["component_count"] = min(len(ordered_groups), MAX_COMPONENTS); item["state"] = "ATTESTING"; self._save(release_id, item)
         return canonical({"components": item["component_count"], "edges": item["edge_count"]})
 
     @gl.public.write
-    def assess_component(self, release_id: u256, entry_index: int) -> str:
+    def assess_component(self, release_id: u256, component_index: int) -> str:
         item = self._load(release_id); self._require(item, "ATTESTING")
-        entry = json.loads(self.entries[self._key(release_id, "entry", entry_index)] or "{}")
-        if not entry or entry.get("assessment"): raise gl.vm.UserError("already_assessed")
-        if entry.get("status") != "VERIFIED": entry["assessment"] = {"result": "BLOCKED"}
+        key = self._key(release_id, "component", component_index)
+        if key not in self.components: raise gl.vm.UserError("invalid_component")
+        component = json.loads(self.components[key] or "{}")
+        if not component or component.get("assessment"): raise gl.vm.UserError("already_assessed")
+        entries = [json.loads(self.entries[self._key(release_id, "entry", index)] or "{}") for index in component.get("entries", [])]
+        source = "\n\n".join("Path: " + entry.get("path", "") + "\n" + entry.get("text", "") for entry in entries)
+        if not entries or any(entry.get("status") != "VERIFIED" for entry in entries): component["assessment"] = {"result": "BLOCKED", "statuses": []}
+        elif len(source) > MAX_COMPONENT_SOURCE_CHARS:
+            component["assessment"] = {"result": "BLOCKED", "statuses": []}
+            item["blockers"].append("component_source_cap:" + str(component_index))
         else:
-            prompt = "Classify this immutable release component against obligations. Reply JSON with result ACCEPT|REJECT|UNCERTAIN and statuses array. Obligations: " + canonical(item["obligations"]) + " Source path: " + entry["path"] + " Source: " + entry["text"]
+            prompt = "Classify this immutable release component against obligations. Reply JSON with result ACCEPT|REJECT|UNCERTAIN and statuses array. Obligations: " + canonical(item["obligations"]) + " Component source: " + source
             verdict = result_from_model(prompt) or {"result": "UNCERTAIN"}
-            entry["assessment"] = {"result": str(verdict.get("result", "UNCERTAIN")).upper(), "statuses": verdict.get("statuses", [])}
-        item["assessed_count"] += 1; self.entries[self._key(release_id, "entry", entry_index)] = canonical(entry); self._save(release_id, item); return canonical(entry["assessment"])
+            component["assessment"] = {"result": str(verdict.get("result", "UNCERTAIN")).upper(), "statuses": verdict.get("statuses", []), "rationale": verdict.get("rationale", "")}
+        component["status"] = component["assessment"]["result"]
+        item["assessed_count"] += 1; self.components[key] = canonical(component); self._save(release_id, item); return canonical(component["assessment"])
 
     @gl.public.write
     def review_edge(self, release_id: u256, edge_index: int) -> str:
         item = self._load(release_id); self._require(item, "ATTESTING")
-        key = self._key(release_id, "edge", edge_index); edge = json.loads(self.edges[key] or "{}")
+        key = self._key(release_id, "edge", edge_index)
+        if key not in self.edges: raise gl.vm.UserError("invalid_edge")
+        edge = json.loads(self.edges[key] or "{}")
         if not edge or edge["status"] != "PENDING": raise gl.vm.UserError("invalid_edge")
         from_entry = None; to_entry = None
         for index in range(item["inventory_count"]):
@@ -324,16 +417,19 @@ class Beacon(gl.Contract):
     def propose(self, release_id: u256) -> str:
         item = self._load(release_id); self._require(item, "ATTESTING")
         if item["assessed_count"] != item["component_count"] or item["reviewed_edges"] != item["edge_count"]: raise gl.vm.UserError("coverage_incomplete")
-        results = []; inventory = []; reviewed_edges = []
+        results = []; inventory = []; assessments = []; reviewed_edges = []
         for i in range(item["inventory_count"]):
-            entry = json.loads(self.entries[self._key(release_id, "entry", i)]); inventory.append({k: entry.get(k) for k in ("path", "blob", "status")}); results.append(entry.get("assessment", {}).get("result", "BLOCKED"))
+            entry = json.loads(self.entries[self._key(release_id, "entry", i)]); inventory.append({k: entry.get(k) for k in ("path", "blob", "size", "class", "status")})
+        for i in range(item["component_count"]):
+            component = json.loads(self.components[self._key(release_id, "component", i)]); assessments.append(component); results.append(component.get("assessment", {}).get("result", "BLOCKED"))
         for i in range(item["edge_count"]): reviewed_edges.append(json.loads(self.edges[self._key(release_id, "edge", i)]))
         edge_results = [edge.get("status", "BLOCKED") for edge in reviewed_edges]
         accepted = not item["blockers"] and results and all(x == "ACCEPT" for x in results) and all(x == "ACCEPT" for x in edge_results)
         rejected = "REJECT" in results or "REJECT" in edge_results
         outcome = "ACCEPTED" if accepted else ("REJECTED" if rejected else "INDETERMINATE")
-        item["certificate"] = {"outcome": outcome, "seal_root": digest(item["seal"]), "inventory_root": digest(inventory), "assessment_root": digest(results), "edge_root": digest(reviewed_edges), "obligation_root": digest(item["obligations"]), "coverage": [item["inventory_count"], item["materialized_count"], item["assessed_count"], item["edge_count"], item["reviewed_edges"]], "blockers": item["blockers"]}
-        if outcome == "INDETERMINATE": item["state"] = "REVIEW"
+        agreement = {key: item[key] for key in ("id", "repo", "ref", "baseline", "implementer", "sponsors", "escrow", "title", "obligations", "scope", "seal_by")}
+        item["certificate"] = {"outcome": outcome, "agreement_root": digest(agreement), "seal_root": digest(item["seal"]), "inventory_root": digest(inventory), "assessment_root": digest(assessments), "edge_root": digest(reviewed_edges), "obligation_root": digest(item["obligations"]), "coverage": [item["inventory_count"], item["materialized_count"], item["component_count"], item["assessed_count"], item["edge_count"], item["reviewed_edges"]], "blockers": item["blockers"]}
+        if outcome == "INDETERMINATE": item["state"] = "REVIEW"; item["indeterminate_until"] = now() + INDETERMINATE_REFUND_SECONDS
         else: item["state"] = "REVIEW"; item["challenge_until"] = now() + CHALLENGE_SECONDS
         self._save(release_id, item); return canonical(item["certificate"])
 
@@ -349,15 +445,25 @@ class Beacon(gl.Contract):
         self._save(release_id, item); return item["state"]
 
     @gl.public.write
+    def refund_indeterminate(self, release_id: u256) -> str:
+        item = self._load(release_id); self._require(item, "REVIEW")
+        if item["certificate"]["outcome"] != "INDETERMINATE": raise gl.vm.UserError("not_indeterminate")
+        if now() < item["indeterminate_until"]: raise gl.vm.UserError("indeterminate_review_open")
+        for account, amount in item["sponsors"].items(): self._credit(account, amount)
+        item["state"] = "REFUNDED"; self._save(release_id, item); return "REFUNDED"
+
+    @gl.public.write
     def challenge_certificate(self, release_id: u256, entry_index: int, reason: str) -> str:
         item = self._load(release_id); self._require(item, "REVIEW")
-        if now() >= item["challenge_until"]: raise gl.vm.UserError("challenge_window_closed")
         if item["certificate"]["outcome"] == "INDETERMINATE": raise gl.vm.UserError("indeterminate_certificate")
+        if now() >= item["challenge_until"]: raise gl.vm.UserError("challenge_window_closed")
         challenger = wallet(gl.message.sender_address)
         if item["certificate"]["outcome"] == "ACCEPTED" and challenger not in item["sponsors"]: raise gl.vm.UserError("sponsor_only")
         if item["certificate"]["outcome"] == "REJECTED" and challenger != item["implementer"]: raise gl.vm.UserError("implementer_only")
         if not 0 <= entry_index < item["inventory_count"] or not 1 <= len(reason.strip()) <= 600: raise gl.vm.UserError("invalid_challenge")
-        entry = json.loads(self.entries[self._key(release_id, "entry", entry_index)] or "{}")
+        entry_key = self._key(release_id, "entry", entry_index)
+        if entry_key not in self.entries: raise gl.vm.UserError("invalid_entry")
+        entry = json.loads(self.entries[entry_key] or "{}")
         item["challenge"] = {"by": challenger, "entry_index": entry_index, "path": entry.get("path", ""), "reason": reason.strip()}
         item["state"] = "CHALLENGED"; self._save(release_id, item); return canonical(item["challenge"])
 
@@ -386,7 +492,7 @@ class Beacon(gl.Contract):
 
     @gl.public.write
     def withdraw(self) -> str:
-        account = wallet(gl.message.sender_address); amount = int(self.balances[account] or 0)
+        account = wallet(gl.message.sender_address); amount = int(self.balances[account]) if account in self.balances else 0
         if amount == 0: return "nothing_to_withdraw"
         self.balances[account] = u256(0); gl.get_contract_at(Address(account)).emit_transfer(value=u256(amount)); return str(amount)
 
@@ -405,6 +511,14 @@ class Beacon(gl.Contract):
         if key not in self.edges: return ""
         return self.edges[key] or ""
     @gl.public.view
+    def get_component(self, release_id: u256, index: int) -> str:
+        key = self._key(release_id, "component", index)
+        if key not in self.components: return ""
+        return self.components[key] or ""
+    @gl.public.view
     def get_balance(self, account: str) -> u256:
         key = account.lower()
         return self.balances[key] if key in self.balances else u256(0)
+    @gl.public.view
+    def get_next_id(self) -> u256:
+        return self.next_id

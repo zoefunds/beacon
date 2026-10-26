@@ -21,6 +21,12 @@ const required = [
   ["\"edge_root\": digest(reviewed_edges)", "edge commitment in certificate"],
   ["def challenge_certificate", "certificate challenge path"],
   ["def review_challenge", "challenge reassessment"],
+  ["def refund_indeterminate", "bounded indeterminate refund path"],
+  ["if not valid_seal(seal)", "complete seal validation"],
+  ["baseline_compare = read_json", "baseline ancestry verification"],
+  ["inventory_already_discovered", "idempotent inventory discovery"],
+  ["component_count\"] = min(len(ordered_groups), MAX_COMPONENTS)", "bounded graph components"],
+  ["current = int(self.balances[account]) if account in self.balances else 0", "safe first balance credit"],
   ["self.balances[account] = u256(0)", "checks-effects before transfer"],
 ];
 const missing = required.filter(([needle]) => !source.includes(needle)).map(([, name]) => name);

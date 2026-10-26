@@ -1,0 +1,30 @@
+html{scroll-behavior:smooth}
+a{color:inherit;text-decoration:none}
+button,a{cursor:pointer}
+nav a:hover{color:#172925;background:#d7ff48;font-weight:800}
+.monitor{margin-top:18px}
+.monitorForm,.operations{display:flex;flex-wrap:wrap;gap:10px;align-items:end;margin-top:18px}
+.monitorForm label,.operations label{display:grid;gap:5px;font-size:11px;font-weight:700}
+.monitor input,.monitor textarea{border:1px solid #dfe1d8;border-radius:6px;padding:9px;background:white;font:12px 'DM Mono';min-width:140px}
+.monitor button{border:1px solid #14201e;border-radius:6px;padding:9px 12px;background:#14201e;color:white;font:700 11px Manrope}
+.monitor button:disabled{opacity:.4;cursor:not-allowed}
+.vaultBar{display:flex;justify-content:space-between;align-items:center;gap:12px;border:1px solid #dfe1d8;background:#f5f8e9;border-radius:7px;padding:10px 12px;font-size:12px}
+.releaseData{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1px;background:#dfe1d8;border:1px solid #dfe1d8;border-radius:8px;overflow:hidden;margin-top:18px}
+.releaseData div{background:#fffffb;padding:12px}
+.releaseData dt{font:10px 'DM Mono';color:#72807c;text-transform:uppercase}
+.releaseData dd{margin:5px 0 0;font-size:12px;overflow-wrap:anywhere}
+.evidenceGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:18px}
+.evidenceGrid article{border:1px solid #dfe1d8;border-radius:8px;padding:12px;min-width:0}
+.evidenceGrid h3,.operations h3{font-size:13px;margin:0 0 8px}
+.evidenceGrid pre{white-space:pre-wrap;overflow-wrap:anywhere;font:10px 'DM Mono';max-height:230px;overflow:auto}
+.evidenceLists{display:grid;gap:8px;margin-top:18px}
+.evidenceLists details{border:1px solid #dfe1d8;border-radius:7px;padding:10px}
+.evidenceLists summary{font-size:12px;font-weight:700}
+.evidenceRow{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:10px;align-items:center;padding:9px 0;border-top:1px solid #dfe1d8;font-size:11px}
+.evidenceRow code,.txReceipt{overflow-wrap:anywhere}
+.operations{border-top:1px solid #dfe1d8;padding-top:18px}
+.operations h3{width:100%}
+.proof{display:block}
+.footerButton{margin-left:auto;border:1px solid #dfe1d8;background:#fffffb;padding:10px 14px;border-radius:7px;font:600 12px Manrope}
+.createdLink{display:inline-block;margin-top:12px;color:#2d7264;font:700 12px Manrope;text-decoration:underline}
+@media(max-width:900px){.evidenceGrid,.releaseData{grid-template-columns:1fr}}

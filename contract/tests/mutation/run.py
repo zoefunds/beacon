@@ -39,12 +39,32 @@ def test_removing_dependency_acceptance_gate_is_rejected():
     assert mutation_is_rejected('all(x == "ACCEPT" for x in edge_results)', 'True')
 
 
+def test_removing_first_credit_membership_guard_is_rejected():
+    assert mutation_is_rejected('current = int(self.balances[account]) if account in self.balances else 0', 'current = int(self.balances[account])')
+
+
+def test_removing_complete_seal_validation_is_rejected():
+    assert mutation_is_rejected('if not valid_seal(seal)', 'if False')
+
+
+def test_removing_baseline_ancestry_check_is_rejected():
+    assert mutation_is_rejected('baseline_compare = read_json', 'baseline_lookup = read_json')
+
+
+def test_removing_indeterminate_refund_is_rejected():
+    assert mutation_is_rejected('def refund_indeterminate', 'def disabled_refund_indeterminate')
+
+
 if __name__ == "__main__":
     tests = [
         test_removing_the_deadline_guard_is_rejected,
         test_removing_the_tree_truncation_guard_is_rejected,
         test_removing_blob_hash_validation_is_rejected,
         test_removing_dependency_acceptance_gate_is_rejected,
+        test_removing_first_credit_membership_guard_is_rejected,
+        test_removing_complete_seal_validation_is_rejected,
+        test_removing_baseline_ancestry_check_is_rejected,
+        test_removing_indeterminate_refund_is_rejected,
     ]
     for test in tests:
         test()

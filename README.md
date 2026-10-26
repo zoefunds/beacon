@@ -11,8 +11,8 @@ Beacon produces a settlement certificate only when all of these are true:
 1. A pre-deadline release seal is verified and remains the only review target.
 2. The complete scoped tree inventory is materialized, including unchanged files.
 3. Every inventory entry has a byte-verified Git blob or a supported, explicitly classified non-text representation.
-4. A deterministic dependency extractor records all supported local import edges; semantic observations may add context but cannot remove edges.
-5. Every affected component and every cross-component edge has an attestation result.
+4. A deterministic dependency extractor records supported Python and JavaScript/TypeScript local import edges, including relative imports, side-effect imports, dynamic imports, and CommonJS `require` calls. Parser caps become explicit blockers.
+5. Deterministic graph connectivity forms bounded components. Every component and every cross-component edge has an attestation result.
 6. The certificate commits to the agreement, inventory, blob hashes, dependency graph, assessments, and coverage counters.
 
 Unsupported content, tree truncation, ambiguous resolution, missing evidence, or budget exhaustion blocks positive settlement. The protocol can return `INDETERMINATE`, but it never upgrades partial coverage into success.
@@ -28,7 +28,9 @@ scripts/        reproducibility and architecture checks
 
 ## Lifecycle
 
-`DRAFT → SEALED → INVENTORY → MATERIALIZED → ATTESTING → REVIEW → FINAL`
+`DRAFT → SEALED → INVENTORY → MATERIALIZED → ATTESTING → REVIEW → ACCEPTED | REJECTED | REFUNDED`
+
+A certificate may also enter `CHALLENGED` before returning to review. Unsealed agreements expire to sponsor credit. An indeterminate certificate stays reviewable for seven days and then becomes sponsor-refundable, so escrow cannot remain locked forever.
 
 The release seal belongs before the deadline. Post-deadline callers merely advance bounded, deterministic work over that seal.
 
@@ -40,3 +42,5 @@ npm --prefix frontend ci
 python -m pip install -r contract/requirements.txt
 npm run check
 ```
+
+The browser console exposes every contract transition, waits for Studionet consensus before reporting success, renders the complete seal/certificate/inventory/component/edge record, and supports pull-payment withdrawals.

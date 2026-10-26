@@ -48,3 +48,23 @@ def test_semantic_result_is_decided_by_validator_consensus():
     text = source()
     assert "gl.vm.run_nondet(leader, validator)" in text
     assert "gl.nondet.exec_prompt" in text
+    assert 'leader_value["result"] == validator_value["result"]' in text
+
+
+def test_first_balance_credit_and_empty_withdraw_check_membership():
+    text = source()
+    assert 'current = int(self.balances[account]) if account in self.balances else 0' in text
+
+
+def test_seal_baseline_and_indeterminate_refund_fail_closed():
+    text = source()
+    assert "if not valid_seal(seal)" in text
+    assert "baseline_compare = read_json" in text
+    assert "def refund_indeterminate" in text
+
+
+def test_component_graph_and_inventory_are_bounded_and_idempotent():
+    text = source()
+    assert 'item.get("inventory_discovered")' in text
+    assert 'self.components[self._key(release_id, "component", index)]' in text
+    assert 'item["component_count"] = min(len(ordered_groups), MAX_COMPONENTS)' in text

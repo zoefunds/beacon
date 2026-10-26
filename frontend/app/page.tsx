@@ -1,45 +1,53 @@
 "use client";
-import { useState } from "react";
-import { demoRelease, phases, statePosition } from "@/lib/release";
-import { assertStudionet, requestAccount } from "@/lib/wallet";
+
+import { useMemo, useState } from "react";
+import { explorerAddressUrl, formatGen, type ReleaseRecord } from "@/lib/beacon-client";
+import { phases, statePosition } from "@/lib/release";
+import { connectStudionet } from "@/lib/wallet";
 import { ReleaseMonitor } from "@/components/ReleaseMonitor";
 
-const checks = [
-  ["Release seal", "e4c91af is bound to main before the deadline", "complete"],
-  ["Source inventory", "64 / 64 paths catalogued from the sealed tree", "complete"],
-  ["Byte materialization", "61 text blobs hash-verified; 3 classified assets", "watch"],
-  ["Dependency lattice", "18 local edges extracted without model filtering", "complete"],
-  ["Component attestations", "49 / 64 bounded packets assessed", "running"],
-  ["Edge review", "Waiting for attestation packets to finish", "idle"],
-];
+function numeric(value: unknown) { const number = Number(value || 0); return Number.isFinite(number) ? number : 0; }
 
 export default function Console() {
+  const [release, setRelease] = useState<ReleaseRecord | null>(null);
   const [selected, setSelected] = useState("Release seal");
   const [account, setAccount] = useState<string | null>(null);
   const [walletError, setWalletError] = useState<string | null>(null);
-  const position = statePosition(demoRelease.state);
+  const state = String(release?.state || "DRAFT");
+  const position = statePosition(state);
+  const certificate = release?.certificate && typeof release.certificate === "object" ? release.certificate as ReleaseRecord : null;
+  const seal = release?.seal && typeof release.seal === "object" ? release.seal as ReleaseRecord : null;
+  const releaseId = release ? String(release.id) : "—";
+  const checks = useMemo(() => [
+    ["Release seal", seal ? `Commit ${String(seal.commit).slice(0, 12)} is bound to ${String(release?.ref)}` : "Waiting for the implementer to seal a commit", seal ? "complete" : "idle", seal ? "verified" : "pending"],
+    ["Source inventory", `${numeric(release?.inventory_count)} paths catalogued`, numeric(release?.inventory_count) > 0 ? "complete" : "idle", `${numeric(release?.inventory_count)} paths`],
+    ["Byte materialization", `${numeric(release?.materialized_count)} / ${numeric(release?.inventory_count)} entries processed`, numeric(release?.materialized_count) === numeric(release?.inventory_count) && numeric(release?.inventory_count) > 0 ? "complete" : "running", `${numeric(release?.materialized_count)} / ${numeric(release?.inventory_count)}`],
+    ["Dependency graph", `${numeric(release?.edge_count)} mandatory edges`, numeric(release?.component_count) > 0 ? "complete" : "idle", `${numeric(release?.edge_count)} edges`],
+    ["Component attestations", `${numeric(release?.assessed_count)} / ${numeric(release?.component_count)} components assessed`, numeric(release?.assessed_count) === numeric(release?.component_count) && numeric(release?.component_count) > 0 ? "complete" : "running", `${numeric(release?.assessed_count)} / ${numeric(release?.component_count)}`],
+    ["Certificate", certificate ? `${String(certificate.outcome)} certificate proposed` : "Waiting for complete coverage", certificate ? "complete" : "idle", certificate ? String(certificate.outcome) : "pending"],
+  ], [release, seal, certificate]);
+
   async function connect() {
-    try {
-      const current = await requestAccount();
-      await assertStudionet(window.ethereum!);
-      setAccount(current); setWalletError(null);
-    } catch (error) { setWalletError(error instanceof Error ? error.message : "Unable to connect wallet"); }
+    try { const current = await connectStudionet(); setAccount(current); setWalletError(null); }
+    catch (error) { setWalletError(error instanceof Error ? error.message : "Unable to connect wallet"); }
   }
+
+  const selectedCheck = checks.find(item => item[0] === selected) || checks[0];
   return <main className="shell">
     <aside className="rail">
       <div className="brand"><span className="beacon">✦</span><span>beacon</span></div>
-      <nav><a className="active">Mission control</a><a href="/launch">New release</a><a>Attestation log</a><a>Vault</a></nav>
-      <div className="network"><i></i><div><b>Studionet</b><small>consensus online</small></div></div>
+      <nav><a className="active" href="#monitor">Mission control</a><a href="/launch">New release</a><a href="#evidence">Attestation log</a><a href="#vault">Vault</a></nav>
+      <div className="network"><i></i><div><b>Studionet</b><small>live RPC</small></div></div>
     </aside>
     <section className="workbench">
-      <header><div className="crumb">RELEASES / <strong>{demoRelease.id}</strong></div><button className="wallet" onClick={connect}>{account ? `${account.slice(0, 6)}…${account.slice(-4)}` : "Connect wallet"} <span>↗</span></button></header>
+      <header><div className="crumb">RELEASES / <strong>{releaseId}</strong></div><button className="wallet" onClick={connect}>{account ? `${account.slice(0, 6)}…${account.slice(-4)}` : "Connect wallet"} <span>↗</span></button></header>
       {walletError && <p className="walletError" role="alert">{walletError}</p>}
-      <div className="titleRow"><div><p className="eyebrow">ATTESTATION IN PROGRESS</p><h1>{demoRelease.title}</h1><p className="repo">⌘ {demoRelease.repo} <span>•</span> sealed commit <code>{demoRelease.seal}</code></p></div><div className="idCard"><span>ESCROW</span><b>12.00 GEN</b><small>2 sponsors</small></div></div>
-      <section className="flight"><div className="flightHead"><div><span className="liveDot"></span> Evidence flight path</div><span>{demoRelease.coverage}% accountable</span></div><div className="timeline">{phases.map((phase, index) => <div key={phase} className={`phase ${index <= position ? "done" : ""} ${phase === demoRelease.state ? "current" : ""}`}><em>{index < position ? "✓" : String(index + 1).padStart(2, "0")}</em><label>{phase.replace("_", " ")}</label></div>)}</div></section>
-      <ReleaseMonitor />
-      <div className="columns"><section className="panel mission"><div className="panelHead"><h2>Verification matrix</h2><span>BOUND TO SEAL</span></div>{checks.map(([name, description, status], index) => <button key={name} onClick={() => setSelected(name)} className={`check ${selected === name ? "selected" : ""}`}><span className={`status ${status}`}></span><span><b>{name}</b><small>{description}</small></span><strong>{index < 3 ? "verified" : index === 4 ? "49 / 64" : "pending"}</strong></button>)}</section>
-      <section className="panel inspector"><div className="panelHead"><h2>Inspector</h2><span>LIVE</span></div><p className="eyebrow">{selected.toUpperCase()}</p><h3>{selected === "Release seal" ? "Pre-deadline source lock" : "Evidence detail"}</h3><p className="muted">{selected === "Release seal" ? "The contract will review only this immutable commit. Branch movement after sealing cannot alter this release." : "Every result is attached to a committed path, blob hash, and release certificate."}</p><div className="codebox"><span>commit</span><code>e4c91af8b6fc7d3a8a720a</code><span>tree</span><code>0a2a4e3c08f7b11d12d891</code><span>scope</span><code>apps/console · packages/auth</code></div><button className="proof">Open evidence receipt <span>→</span></button></section></div>
-      <footer><span>Last consensus round <b>just now</b></span><span>Certificate root <code>9db7…74e2</code></span><button>View on explorer ↗</button></footer>
+      <div className="titleRow"><div><p className="eyebrow">{release ? `${state} · LIVE ON-CHAIN` : "SELECT A RELEASE"}</p><h1>{release ? String(release.title) : "Release mission control"}</h1><p className="repo">⌘ {release ? `${String(release.repo)} · ${String(release.ref)}` : "Enter a release ID below"}{seal && <> <span>•</span> sealed commit <code>{String(seal.commit).slice(0, 12)}</code></>}</p></div><div className="idCard"><span>ESCROW</span><b>{release ? formatGen(release.escrow) : "0"} GEN</b><small>{release ? `${Object.keys((release.sponsors as Record<string, unknown>) || {}).length} sponsor(s)` : "No release selected"}</small></div></div>
+      <section className="flight"><div className="flightHead"><div><span className="liveDot"></span> Evidence flight path</div><span>{certificate ? String(certificate.outcome) : state}</span></div><div className="timeline">{phases.map((phase, index) => <div key={phase} className={`phase ${index <= position ? "done" : ""} ${phase === state ? "current" : ""}`}><em>{index < position ? "✓" : String(index + 1).padStart(2, "0")}</em><label>{phase.replace("_", " ")}</label></div>)}</div></section>
+      <ReleaseMonitor onRelease={setRelease} />
+      {release && <div className="columns"><section className="panel mission"><div className="panelHead"><h2>Verification matrix</h2><span>LIVE EVIDENCE</span></div>{checks.map(([name, description, status, result]) => <button key={name} onClick={() => setSelected(name)} className={`check ${selected === name ? "selected" : ""}`}><span className={`status ${status}`}></span><span><b>{name}</b><small>{description}</small></span><strong>{result}</strong></button>)}</section>
+      <section className="panel inspector"><div className="panelHead"><h2>Inspector</h2><span>ON-CHAIN</span></div><p className="eyebrow">{selected.toUpperCase()}</p><h3>{selectedCheck[3]}</h3><p className="muted">{selectedCheck[1]}</p><div className="codebox"><span>baseline</span><code>{String(release.baseline)}</code><span>tree</span><code>{String(seal?.tree || "not sealed")}</code><span>scope</span><code>{Array.isArray(release.scope) ? release.scope.join(" · ") : ""}</code></div><a className="proof" href="#evidence">Open evidence receipt <span>→</span></a></section></div>}
+      <footer><span>Polling <b>every 12 seconds</b></span><span>Certificate root <code>{String(certificate?.agreement_root || certificate?.seal_root || "not proposed").slice(0, 16)}</code></span><a className="footerButton" href={explorerAddressUrl()} target="_blank" rel="noreferrer">View contract on explorer ↗</a></footer>
     </section>
   </main>;
 }
