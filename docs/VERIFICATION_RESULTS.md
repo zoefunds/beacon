@@ -1,6 +1,8 @@
 # Verification results
 
-Reference: `reviewer-evidence-2026-10-26-v9`.
+> Results last reproduced 27 October 2026.
+
+Reference: `reviewer-evidence-2026-10-26-v9` (`340ec008fc864feb817d5445c35c7cd06251574e`).
 
 | Command | Result |
 | --- | --- |

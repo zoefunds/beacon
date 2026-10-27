@@ -1,10 +1,13 @@
 # Reviewer evidence
 
+> Evidence snapshot verified 27 October 2026.
+
 The canonical public review reference is `reviewer-evidence-2026-10-26-v9`. Start with [`../REVIEWER_SUBMISSION.md`](../REVIEWER_SUBMISSION.md) for direct source links and the complete Studionet transaction table.
 
 ## Artifact identity
 
 - Contract: `0xeE34e10CF770aaDbfA9C369Eec946eb5c3D164E9`
+- Reviewed commit: `340ec008fc864feb817d5445c35c7cd06251574e`
 - Deployment: `0x4038cc6af9f83d30a7ac3daab2202a9da564bcb147046fb4405c5135ec41b4c8`
 - Source SHA-256: `4ae0e6a0fe1f55fc4ec72c0caf5901267a2f7b557ffec250e88f0d4c3bed8d46`
 - Source size: 36,764 bytes
@@ -26,7 +29,7 @@ The certificate commits these roots:
 - edges: `4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945`
 - obligations: `7801a49a9fe713bc618e0d381d9b7eeac0daf25116b599d943748bbe034a6d41`
 
-Transaction `0xce4a2ec175194e41331f83791e2bd1882343b85b4e017a4578a7e74cd17b983a` proves premature finalization rolls back while the challenge window is open. Final settlement and replay hashes are listed in the root reviewer submission and asserted by `scripts/verify-studionet.mjs`.
+Transaction `0xce4a2ec175194e41331f83791e2bd1882343b85b4e017a4578a7e74cd17b983a` proves premature finalization rolls back while the challenge window is open. Finalization `0x2c0b51a43d925857cb171fa7ce996e67a0a3a3b6fbab9b6e235eba046f52b72a` succeeds after the window; duplicate finalization `0x5ce5d65664ce363b6f3da23fb6298001f3068300b43e5a4bb62cb984bc85634e` rolls back. Withdrawal `0x4b4ec2750e5e6bc615181e8a8643c462d8bd16c1762b55f76213ddb2ff2cf7a0` triggers the 1 GEN transfer `0xab85ab79dc746e7ac2fe90dd79170bf37ca0d908bf50ba33f661077b251926cc`; repeat withdrawal `0xa2c4b180c2a2231276b982314e93425e97eb0f16d9b36ab718e3e28a538281fa` emits no transfer. These hashes are linked in the root reviewer submission and asserted by `scripts/verify-studionet.mjs`.
 
 ## Adversarial coverage
 

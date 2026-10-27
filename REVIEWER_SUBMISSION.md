@@ -1,9 +1,12 @@
 # Beacon reviewer submission
 
+> Evidence verified 27 October 2026. The immutable review tag identifies the deployed implementation; later documentation-only commits do not change the contract or frontend artifacts below.
+
 ## Canonical reference
 
 - Repository: `https://github.com/zoefunds/beacon`
 - Review tag: `reviewer-evidence-2026-10-26-v9`
+- Reviewed commit: `340ec008fc864feb817d5445c35c7cd06251574e`
 - Frontend: `https://bea-con.vercel.app/`
 - Immutable frontend: `https://bea-lnvcqqt1m-adebiyi2002gmailcoms-projects.vercel.app`
 - Studionet contract: `0xeE34e10CF770aaDbfA9C369Eec946eb5c3D164E9`

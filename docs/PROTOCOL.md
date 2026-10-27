@@ -1,5 +1,7 @@
 # Beacon protocol
 
+> Protocol description verified 27 October 2026 against `reviewer-evidence-2026-10-26-v9`.
+
 Beacon is an escrow agreement between sponsors and an implementer. It evaluates a named, pre-sealed repository release against explicit obligations.
 
 ## Release seal
@@ -13,7 +15,7 @@ The agreement includes one or more normalized repository paths. Bounded traversa
 ## Two evidence lanes
 
 1. **Mechanical lane.** Blob bytes are verified against Git object hashes. Parsers extract local Python and JavaScript/TypeScript imports and exports. Every resolvable edge is mandatory coverage.
-2. **Semantic lane.** Validators classify bounded component packets against each obligation. Validators compare the settlement-relevant category; explanatory text is retained as evidence but cannot make consensus artificially brittle. Their observations are never authoritative for dependency completeness.
+2. **Semantic lane.** Validators classify bounded component packets against each obligation. Validators compare both the settlement result and the complete ordered obligation-status vector; explanatory text is retained as evidence but cannot make consensus artificially brittle. Their observations are never authoritative for dependency completeness.
 
 Components are constructed from deterministic graph connectivity rather than model-issued labels. Python relative and absolute-local imports plus JavaScript/TypeScript static, side-effect, dynamic, and CommonJS imports are covered. Unresolved local references and parser limits become blockers. Cross-component edges create mandatory compatibility checks.
 
@@ -45,7 +47,9 @@ The minimum initial escrow is 1 GEN. A release deadline must be at least five mi
 
 ## Public contract interface
 
-Lifecycle writes are `open_release`, `sponsor`, `seal_release`, `begin_inventory`, `discover_inventory`, `close_inventory`, `materialize`, `build_review_graph`, `assess_component`, `review_edge`, `propose`, `challenge_certificate`, `review_challenge`, `finalize`, `expire_unsealed`, `refund_indeterminate`, and `withdraw`.
+Lifecycle writes are `open_release`, `deposit_funding`, `sponsor`, `withdraw_funding`, `seal_release`, `begin_inventory`, `discover_inventory`, `close_inventory`, `materialize`, `build_review_graph`, `assess_component`, `review_edge`, `propose`, `challenge_certificate`, `review_challenge`, `finalize`, `expire_unsealed`, `refund_indeterminate`, and `withdraw`.
+
+`deposit_funding` accepts GEN into the caller's unallocated funding balance without performing release validation. `sponsor` subsequently allocates a requested amount to an existing draft release, and `withdraw_funding` returns any unallocated balance. This separation ensures failed agreement validation cannot strand attached value outside the contract's accounting.
 
 `open_release` normalizes the GenLayer runtime `Address` representation before validating and storing the implementer. This keeps browser/SDK address-shaped calldata compatible with the canonical lowercase address used by later authorization checks.
 

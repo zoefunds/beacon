@@ -1,5 +1,7 @@
 # Beacon
 
+> Documentation verified 27 October 2026 against implementation tag `reviewer-evidence-2026-10-26-v9`, the active Studionet deployment, and the production frontend.
+
 Beacon is a GenLayer release-attestation and conditional GEN escrow protocol. A release is sealed to an immutable Git commit before its deadline; after the deadline, the contract reconstructs the complete scoped inventory, verifies Git blob bytes, builds a bounded dependency graph, obtains validator-consensus semantic judgments, and issues a root-committed settlement certificate.
 
 Reviewer entry point: [`REVIEWER_SUBMISSION.md`](REVIEWER_SUBMISSION.md).
@@ -30,9 +32,10 @@ Unsealed releases can expire to sponsor credit. A certificate can be challenged 
 - Deployment transaction: `0x4038cc6af9f83d30a7ac3daab2202a9da564bcb147046fb4405c5135ec41b4c8`
 - Deployed source: 36,764 bytes, SHA-256 `4ae0e6a0fe1f55fc4ec72c0caf5901267a2f7b557ffec250e88f0d4c3bed8d46`
 - Review tag: `reviewer-evidence-2026-10-26-v9`
+- Reviewed commit: `340ec008fc864feb817d5445c35c7cd06251574e`
 - Vercel deployment: `dpl_CYJESrkxDLdxNNYo1E57WZP9gXjG`
 
-The frontend talks directly to GenLayer and contains no custodial backend.
+The frontend talks directly to GenLayer and contains no custodial backend. The review tag and reviewed commit identify the deployed implementation; later documentation-only commits do not change its source digest.
 
 ## Reproduce
 

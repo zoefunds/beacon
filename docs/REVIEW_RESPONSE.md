@@ -1,6 +1,8 @@
 # Independent verification guide
 
-Beacon's implementation, deployment, and evidence are reproducible from `reviewer-evidence-2026-10-26-v9`.
+> Reproduction instructions verified 27 October 2026.
+
+Beacon's deployed implementation and evidence are reproducible from tag `reviewer-evidence-2026-10-26-v9`, commit `340ec008fc864feb817d5445c35c7cd06251574e`. Later documentation-only commits do not alter that deployed source.
 
 ## Verify locally
 
