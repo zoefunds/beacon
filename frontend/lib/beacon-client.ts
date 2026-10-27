@@ -1,13 +1,12 @@
 import { createClient } from "genlayer-js";
+import { studionet } from "genlayer-js/chains";
 import type { Eip1193Provider } from "./wallet";
 
-export const STUDIONET = {
-  id: 61999,
-  name: "GenLayer Studionet",
-  nativeCurrency: { name: "GEN", symbol: "GEN", decimals: 18 },
-  rpcUrls: { default: { http: ["https://studio.genlayer.com/api"] } },
-  blockExplorers: { default: { name: "GenLayer Explorer", url: "https://explorer-studio.genlayer.com" } },
-} as const;
+// The SDK's chain definition includes the consensus contracts and validator
+// defaults required to encode Intelligent Contract transactions. A generic
+// EVM-style chain object is insufficient for writeContract.
+export const STUDIONET = studionet;
+const STUDIONET_EXPLORER = STUDIONET.blockExplorers?.default.url ?? "https://explorer-studio.genlayer.com";
 
 export type ReleaseRecord = Record<string, unknown>;
 export type BeaconArgument = string | number | bigint;
@@ -34,7 +33,7 @@ export function contractAddress(): `0x${string}` | null {
 
 export function explorerAddressUrl() {
   const address = contractAddress();
-  return address ? `${STUDIONET.blockExplorers.default.url}/address/${address}` : STUDIONET.blockExplorers.default.url;
+  return address ? `${STUDIONET_EXPLORER}/address/${address}` : STUDIONET_EXPLORER;
 }
 
 export function beaconReader() { return createClient({ chain: STUDIONET }); }
