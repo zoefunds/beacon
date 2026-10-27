@@ -81,7 +81,10 @@ def result_from_model(prompt):
             statuses = value.get("statuses", [])
             if not isinstance(statuses, list) or len(statuses) > MAX_OBLIGATIONS:
                 return None
-            return {"result": result, "statuses": [str(x)[:80] for x in statuses], "rationale": str(value.get("rationale", ""))[:1200]}
+            statuses = [str(x).upper() for x in statuses]
+            if any(status not in {"MET", "NOT_MET", "UNCERTAIN"} for status in statuses):
+                return None
+            return {"result": result, "statuses": statuses, "rationale": str(value.get("rationale", ""))[:1200]}
         except Exception:
             return None
     def leader():
@@ -93,7 +96,7 @@ def result_from_model(prompt):
             if not isinstance(leaders_res, gl.vm.Return): return False
             leader_value = normalize(leaders_res.calldata)
             validator_value = leader()
-            return leader_value is not None and leader_value["result"] == validator_value["result"]
+            return leader_value is not None and leader_value["result"] == validator_value["result"] and leader_value["statuses"] == validator_value["statuses"]
         except Exception:
             return False
     try:
@@ -198,6 +201,7 @@ class Beacon(gl.Contract):
     edges: TreeMap[str, str]
     components: TreeMap[str, str]
     balances: TreeMap[str, u256]
+    funding_balances: TreeMap[str, u256]
 
     def __init__(self):
         self.next_id = u256(1)
@@ -230,9 +234,8 @@ class Beacon(gl.Contract):
         if not isinstance(baseline_compare, dict) or str(((baseline_compare.get("merge_base_commit") or {}).get("sha") or "")).lower() != item["baseline"]: return None
         return {"commit": commit.lower(), "tree": tree, "baseline_tree": baseline_tree, "observed_ref_head": head}
 
-    @gl.public.write.payable
+    @gl.public.write
     def open_release(self, repo: str, ref: str, baseline: str, implementer: str, title: str, obligations_json: str, scope_json: str, seal_by: int) -> str:
-        if int(gl.message.value) < MIN_ESCROW: raise gl.vm.UserError("minimum_escrow")
         implementer_address = str(implementer)
         if not repository(repo) or not sha(baseline) or not re.fullmatch(r"0x[0-9a-fA-F]{40}", implementer_address): raise gl.vm.UserError("invalid_identity")
         if not 1 <= len(ref.strip()) <= MAX_REF_CHARS or any(value in ref for value in ("..", "?", "#", "\x00")): raise gl.vm.UserError("invalid_ref")
@@ -242,22 +245,37 @@ class Beacon(gl.Contract):
         except Exception: raise gl.vm.UserError("invalid_obligations")
         if not isinstance(obligations, list) or not 1 <= len(obligations) <= MAX_OBLIGATIONS or any(not isinstance(x, str) or not x.strip() or len(x.strip()) > MAX_OBLIGATION_CHARS for x in obligations): raise gl.vm.UserError("invalid_obligations")
         release_id = self.next_id; self.next_id = u256(int(release_id) + 1)
-        item = {"id": int(release_id), "state": "DRAFT", "repo": repo, "ref": ref.strip(), "baseline": baseline.lower(), "implementer": implementer_address.lower(), "sponsors": {wallet(gl.message.sender_address): int(gl.message.value)}, "escrow": int(gl.message.value), "title": title.strip(), "obligations": [str(x).strip() for x in obligations], "scope": normalized_scope(scope_json), "seal_by": seal_by, "seal": None, "inventory_discovered": False, "inventory_count": 0, "materialized_count": 0, "component_count": 0, "assessed_count": 0, "edge_count": 0, "reviewed_edges": 0, "blockers": [], "challenge_until": 0, "indeterminate_until": 0, "challenge": None, "certificate": None}
+        item = {"id": int(release_id), "state": "DRAFT", "repo": repo, "ref": ref.strip(), "baseline": baseline.lower(), "implementer": implementer_address.lower(), "sponsors": {}, "escrow": 0, "title": title.strip(), "obligations": [str(x).strip() for x in obligations], "scope": normalized_scope(scope_json), "seal_by": seal_by, "seal": None, "inventory_discovered": False, "inventory_count": 0, "materialized_count": 0, "component_count": 0, "assessed_count": 0, "edge_count": 0, "reviewed_edges": 0, "blockers": [], "challenge_until": 0, "indeterminate_until": 0, "challenge": None, "certificate": None}
         self._save(release_id, item)
         return canonical({"release_id": int(release_id), "state": "DRAFT"})
 
     @gl.public.write.payable
-    def sponsor(self, release_id: u256) -> str:
-        item = self._load(release_id); self._require(item, "DRAFT")
+    def deposit_funding(self) -> str:
+        # This is the only value-bearing entry point and deliberately has no
+        # arguments or reverting validation. Studionet credits attached value
+        # even when contract execution rolls back, so deposits must always be
+        # recorded before a separate allocation transaction can validate.
+        who = wallet(gl.message.sender_address)
         value = int(gl.message.value)
-        if value <= 0: raise gl.vm.UserError("empty_funding")
-        who = wallet(gl.message.sender_address); item["sponsors"][who] = item["sponsors"].get(who, 0) + value; item["escrow"] += value
+        current = int(self.funding_balances[who]) if who in self.funding_balances else 0
+        self.funding_balances[who] = u256(current + value)
+        return str(current + value)
+
+    @gl.public.write
+    def sponsor(self, release_id: u256, amount: u256) -> str:
+        item = self._load(release_id); self._require(item, "DRAFT")
+        value = int(amount); who = wallet(gl.message.sender_address)
+        available = int(self.funding_balances[who]) if who in self.funding_balances else 0
+        if value <= 0 or value > available: raise gl.vm.UserError("insufficient_funding_balance")
+        self.funding_balances[who] = u256(available - value)
+        item["sponsors"][who] = item["sponsors"].get(who, 0) + value; item["escrow"] += value
         self._save(release_id, item); return "funded"
 
     @gl.public.write
     def seal_release(self, release_id: u256, commit: str) -> str:
         item = self._load(release_id)
         if item["state"] not in {"DRAFT", "SEALED"}: raise gl.vm.UserError("invalid_state")
+        if item["escrow"] < MIN_ESCROW: raise gl.vm.UserError("minimum_escrow")
         if wallet(gl.message.sender_address) != item["implementer"]: raise gl.vm.UserError("implementer_only")
         if now() >= item["seal_by"] or not sha(commit): raise gl.vm.UserError("seal_closed")
         def fetch_seal(): return canonical(self._seal_source(item, commit) or {})
@@ -297,6 +315,10 @@ class Beacon(gl.Contract):
             if not in_scope(path, item["scope"]): continue
             for scope in item["scope"]:
                 if path == scope or path.startswith(scope + "/"): scope_hits[scope] = True
+            # Recursive Git trees contain directory nodes as navigation
+            # metadata. Files and submodules are the evidence-bearing entries;
+            # an ordinary directory must not become an unsupported blocker.
+            if kind == "tree": continue
             if not path_ok(path) or not in_scope(path, item["scope"]) or kind not in {"blob", "commit"}: item["blockers"].append("unsupported_inventory_entry"); continue
             index = item["inventory_count"]; classification = "TEXT" if kind == "blob" and extension(path) in TEXT_EXTENSIONS else ("BINARY" if kind == "blob" else "SUBMODULE")
             self.entries[self._key(release_id, "entry", index)] = canonical({"path": path, "blob": blob, "size": size, "class": classification, "status": "PENDING"})
@@ -396,8 +418,14 @@ class Beacon(gl.Contract):
             component["assessment"] = {"result": "BLOCKED", "statuses": []}
             item["blockers"].append("component_source_cap:" + str(component_index))
         else:
-            prompt = "Classify this immutable release component against obligations. Reply JSON with result ACCEPT|REJECT|UNCERTAIN and statuses array. Obligations: " + canonical(item["obligations"]) + " Component source: " + source
+            status_example = ["MET" for _ in item["obligations"]]
+            prompt = ("Classify this immutable release component against obligations. Return exactly one JSON object with keys result, statuses, and rationale. "
+                      "result must be ACCEPT, REJECT, or UNCERTAIN. statuses must contain exactly " + str(len(item["obligations"])) +
+                      " entries, in obligation order, using only MET, NOT_MET, or UNCERTAIN. Never omit statuses. Example shape: " +
+                      canonical({"result": "ACCEPT", "statuses": status_example, "rationale": "brief evidence-based reason"}) +
+                      " Obligations: " + canonical(item["obligations"]) + " Component source: " + source)
             verdict = result_from_model(prompt) or {"result": "UNCERTAIN"}
+            if len(verdict.get("statuses", [])) != len(item["obligations"]): verdict = {"result": "UNCERTAIN", "statuses": [], "rationale": "incomplete obligation coverage"}
             component["assessment"] = {"result": str(verdict.get("result", "UNCERTAIN")).upper(), "statuses": verdict.get("statuses", []), "rationale": verdict.get("rationale", "")}
         component["status"] = component["assessment"]["result"]
         item["assessed_count"] += 1; self.components[key] = canonical(component); self._save(release_id, item); return canonical(component["assessment"])
@@ -417,7 +445,7 @@ class Beacon(gl.Contract):
         if not from_entry or not to_entry:
             edge["status"] = "BLOCKED"; item["blockers"].append("edge_source_missing")
         else:
-            prompt = "Review compatibility of a sealed dependency edge. Reply JSON with result ACCEPT|REJECT|UNCERTAIN. Consumer path/source: " + edge["from"] + "\n" + from_entry.get("text", "") + "\nProvider path/source: " + edge["to"] + "\n" + to_entry.get("text", "")
+            prompt = "Review compatibility of a sealed dependency edge. Reply JSON with result ACCEPT|REJECT|UNCERTAIN, statuses as an empty list, and a rationale. Consumer path/source: " + edge["from"] + "\n" + from_entry.get("text", "") + "\nProvider path/source: " + edge["to"] + "\n" + to_entry.get("text", "")
             verdict = result_from_model(prompt) or {"result": "UNCERTAIN"}
             edge["status"] = str(verdict.get("result", "UNCERTAIN")).upper()
         item["reviewed_edges"] += 1; self.edges[key] = canonical(edge); self._save(release_id, item); return canonical(edge)
@@ -480,16 +508,20 @@ class Beacon(gl.Contract):
     def review_challenge(self, release_id: u256) -> str:
         item = self._load(release_id); self._require(item, "CHALLENGED")
         challenge = item["challenge"]; entry = json.loads(self.entries[self._key(release_id, "entry", challenge["entry_index"])] or "{}")
-        prompt = "Reassess a sealed release certificate challenge using only the committed entry. Reply JSON with result ACCEPT|REJECT|UNCERTAIN. Obligations: " + canonical(item["obligations"]) + " Certificate outcome: " + item["certificate"]["outcome"] + " Challenge: " + challenge["reason"] + " Path: " + challenge["path"] + " Source: " + entry.get("text", "")
+        prompt = "Reassess a sealed release certificate challenge using only the committed entry. Reply JSON with result ACCEPT|REJECT|UNCERTAIN and one status per obligation using only MET|NOT_MET|UNCERTAIN. Obligations: " + canonical(item["obligations"]) + " Certificate outcome: " + item["certificate"]["outcome"] + " Challenge: " + challenge["reason"] + " Path: " + challenge["path"] + " Source: " + entry.get("text", "")
         verdict = result_from_model(prompt) or {"result": "UNCERTAIN"}
+        if len(verdict.get("statuses", [])) != len(item["obligations"]): verdict = {"result": "UNCERTAIN", "statuses": [], "rationale": "incomplete obligation coverage"}
         result = str(verdict.get("result", "UNCERTAIN")).upper()
         # A challenge can invalidate an acceptance, but one rechecked entry
         # cannot manufacture a global acceptance from a prior rejection.
-        if item["certificate"]["outcome"] == "ACCEPTED" and result == "REJECT": item["certificate"]["outcome"] = "REJECTED"
+        if item["certificate"]["outcome"] == "ACCEPTED" and result == "ACCEPT": item["certificate"]["outcome"] = "ACCEPTED"
+        elif item["certificate"]["outcome"] == "ACCEPTED" and result == "REJECT": item["certificate"]["outcome"] = "REJECTED"
         elif item["certificate"]["outcome"] == "REJECTED" and result == "REJECT": item["certificate"]["outcome"] = "REJECTED"
         else: item["certificate"]["outcome"] = "INDETERMINATE"
         item["certificate"]["challenge"] = {"path": challenge["path"], "result": result}
-        item["state"] = "REVIEW"; item["challenge_until"] = now(); self._save(release_id, item)
+        item["state"] = "REVIEW"; item["challenge_until"] = now()
+        if item["certificate"]["outcome"] == "INDETERMINATE": item["indeterminate_until"] = now() + INDETERMINATE_REFUND_SECONDS
+        self._save(release_id, item)
         return canonical(item["certificate"])
 
     @gl.public.write
@@ -504,6 +536,13 @@ class Beacon(gl.Contract):
         account = wallet(gl.message.sender_address); amount = int(self.balances[account]) if account in self.balances else 0
         if amount == 0: return "nothing_to_withdraw"
         self.balances[account] = u256(0); _Recipient(Address(account)).emit_transfer(value=u256(amount)); return str(amount)
+
+    @gl.public.write
+    def withdraw_funding(self) -> str:
+        account = wallet(gl.message.sender_address)
+        amount = int(self.funding_balances[account]) if account in self.funding_balances else 0
+        if amount == 0: return "nothing_to_withdraw"
+        self.funding_balances[account] = u256(0); _Recipient(Address(account)).emit_transfer(value=u256(amount)); return str(amount)
 
     @gl.public.view
     def get_release(self, release_id: u256) -> str:
@@ -528,6 +567,10 @@ class Beacon(gl.Contract):
     def get_balance(self, account: str) -> u256:
         key = account.lower()
         return self.balances[key] if key in self.balances else u256(0)
+    @gl.public.view
+    def get_funding_balance(self, account: str) -> u256:
+        key = account.lower()
+        return self.funding_balances[key] if key in self.funding_balances else u256(0)
     @gl.public.view
     def get_next_id(self) -> u256:
         return self.next_id

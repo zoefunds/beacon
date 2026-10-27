@@ -28,13 +28,14 @@ def direct_deploy(direct_vm, tmp_path):
             ("releases", "TreeMap[u256, str]"), ("entries", "TreeMap[str, str]"),
             ("edges", "TreeMap[str, str]"), ("components", "TreeMap[str, str]"),
             ("balances", "TreeMap[str, u256]"),
+            ("funding_balances", "TreeMap[str, u256]"),
         ):
             source = source.replace(f"    {name}: {declaration}\n", "")
         source = source.replace(
             "        self.next_id = u256(1)",
             "        self.next_id = u256(1)\n"
             "        self.releases = {}\n        self.entries = {}\n"
-            "        self.edges = {}\n        self.components = {}\n        self.balances = {}",
+            "        self.edges = {}\n        self.components = {}\n        self.balances = {}\n        self.funding_balances = {}",
             1,
         )
         adapter = tmp_path / "beacon_direct_adapter.py"

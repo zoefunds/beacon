@@ -1,60 +1,24 @@
 # Deployment
 
-Beacon is deployed as one GenLayer Intelligent Contract and a static browser frontend.
-
 ## Active production record
 
 | Item | Value |
 | --- | --- |
 | Frontend | `https://bea-con.vercel.app/` |
-| Vercel deployment | `dpl_CnCy9Wbyus4StJBV2YTDyn3KU4Ei` |
-| Frontend Git tree | `1669a4e47d5bb6beb661de3fd97a2a4a9d08050c` |
+| Immutable frontend URL | `https://bea-lnvcqqt1m-adebiyi2002gmailcoms-projects.vercel.app` |
+| Vercel deployment | `dpl_CYJESrkxDLdxNNYo1E57WZP9gXjG` |
 | Network | GenLayer Studionet (`61999`) |
 | RPC | `https://studio.genlayer.com/api` |
-| Explorer | `https://explorer-studio.genlayer.com` |
-| Contract | `0x48629d95C2b1e51790d12b3E55108e5902727D4c` |
-| Deployment transaction | `0xce6f6c496d144c1fdd6f8134ab45d4cff7081913b0c78e04881058565ecfa8d0` |
-| Reproducible review reference | `reviewer-evidence-2026-10-26-v8` |
-| Deployed source commit | `afdf1de59fa5b3c04453315a2bbf5af19c7fb79e` |
-| Deployed source SHA-256 | `abeb2fd173aaf01edb98c9046ecb708ed38b5177f87097efdd0e362b56d2a7a0` |
+| Contract | `0xeE34e10CF770aaDbfA9C369Eec946eb5c3D164E9` |
+| Deployment transaction | `0x4038cc6af9f83d30a7ac3daab2202a9da564bcb147046fb4405c5135ec41b4c8` |
+| Source SHA-256 | `4ae0e6a0fe1f55fc4ec72c0caf5901267a2f7b557ffec250e88f0d4c3bed8d46` |
+| Source size | `36,764` bytes |
+| Review reference | `reviewer-evidence-2026-10-26-v9` |
 
-The source digest covers the exact 33,707-byte `contract/contracts/beacon.py` payload returned by Studionet. The deployment started with `next_id = 1` and no preloaded release or balance data.
+The steward source fetcher retrieved the deployed payload from Studionet, compiled it, and produced the same SHA-256 digest as `contract/contracts/beacon.py`. Its bundled SDK validation could not load the pinned runner archive; the direct repository `genvm-lint` run independently passed all 3 lint checks.
 
-## Contract
+Set `NEXT_PUBLIC_BEACON_CONTRACT_ADDRESS=0xeE34e10CF770aaDbfA9C369Eec946eb5c3D164E9` for the frontend. The deployed routes are `/`, `/launch`, `/attestations?release=<id>`, and `/vault`. The browser communicates directly with GenLayer and contains no server wallet or database.
 
-1. Install the pinned tooling with `python3 -m venv .venv` and `.venv/bin/python -m pip install -r contract/requirements.txt`.
-2. Run `npm run check` from the repository root.
-3. Deploy `contract/contracts/beacon.py` using the GenLayer CLI against Studionet.
-4. Record the deployed address only after its deployment transaction has reached finality and its source matches the reviewed Git blob.
+`npm run check` runs 38 protocol guards, 41 contract tests, 20 mutation controls, a production build, and 18 frontend tests. `genvm-lint contract/contracts/beacon.py` passes 3 checks and `npm --prefix frontend audit --omit=dev` reports 0 vulnerabilities.
 
-## Frontend
-
-1. Create `frontend/.env.local` for local development.
-2. Add `NEXT_PUBLIC_BEACON_CONTRACT_ADDRESS=0x48629d95C2b1e51790d12b3E55108e5902727D4c`.
-3. Run `npm --prefix frontend run build`.
-
-The browser talks directly to the GenLayer RPC and the user’s EIP-1193 wallet. It contains no server wallet, API route, database, or background worker.
-
-The deployed route map is:
-
-- `/` — live release mission control
-- `/launch` — contract-ready release creation form and test-data autofill
-- `/attestations?release=<id>` — full seal, evidence, graph, challenge, transaction, and certificate record
-- `/vault` — connected-wallet credit lookup and withdrawal
-
-## Verification gates
-
-Run `npm run check` from the repository root. The current suite contains 28 protocol guards, 33 contract tests, 10 mutation controls, and 15 frontend tests, followed by a production build. Also run:
-
-```sh
-genvm-lint contract/contracts/beacon.py
-npm --prefix frontend audit --omit=dev
-```
-
-At the 26 October 2026 deployment audit, all local gates passed and npm reported zero production vulnerabilities. The production alias resolves to Vercel deployment `dpl_CnCy9Wbyus4StJBV2YTDyn3KU4Ei` with status Ready. [GitHub Actions](https://github.com/zoefunds/beacon/actions) receives each branch and review-tag push, but the repository owner's account billing lock currently causes both jobs to fail with zero executed steps. This external availability issue is not represented as a code failure or a passing CI result.
-
-## Live lifecycle verification
-
-Release `#1` on the active contract proves the financial expiry path. It opened with exactly 1 GEN, expired only after its recorded deadline, credited the fixed sponsor, transferred exactly 1 GEN to that EOA, and rejected a duplicate payout by returning no triggered transfer on a second withdrawal.
-
-Release `#2` proves the complete certificate path on the same active deployment. It seals a commit before deadline, rejects a late substitution, inventories and materializes the full one-file fixture, builds its deterministic graph, obtains three agreeing validator votes for semantic assessment and certificate proposal, then routes the rejected certificate's escrow to the sponsor. A repeated finalization rolls back and a repeated withdrawal emits no transfer. Exact hashes, stored roots, balances, and executable assertions are in `docs/REVIEWER_EVIDENCE.md`, `docs/REVIEW_RESPONSE.md`, and `npm run evidence:live`.
+Exact lifecycle transactions are recorded in `docs/REVIEWER_EVIDENCE.md` and checked by `npm run evidence:live`.

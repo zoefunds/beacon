@@ -19,8 +19,8 @@ Beacon assumes public Git hosts return a consistent API response to validators u
 | Non-decisive model result | Seven-day review followed by permissionless sponsor refund; no permanent escrow lock. |
 | First post-deadline caller selects evidence | `begin_inventory` only advances the already stored seal and never reads the moving branch. |
 | Duplicate discovery or transition calls | Discovery is explicitly one-shot; later methods require exact state and coverage counters. |
-| Validator prose differs | Consensus compares the bounded settlement category while retaining prose only as supporting evidence. |
-| Mechanical completeness mistaken for acceptance | Native semantic assessment is still mandatory; active release `#2` has complete deterministic coverage but a validator-consensus `REJECTED` certificate. |
+| Validator prose differs | Consensus compares both the bounded settlement category and the complete ordered obligation-status vector while retaining prose only as supporting evidence. |
+| Mechanical completeness mistaken for acceptance | Native semantic assessment is mandatory; active release `#1` has complete deterministic coverage and a separate validator-consensus `ACCEPT` / `MET` judgment. |
 | Certificate replay | `finalize` requires the exact `REVIEW` state and moves to a terminal state before crediting; the active duplicate-finalize transaction rolls back. |
 
 GenLayer consensus is used for remote source facts and bounded semantic classifications. State transitions, graph construction, coverage accounting, SHA-256 commitments, refund timing, and settlement are deterministic.

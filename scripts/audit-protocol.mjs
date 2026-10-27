@@ -31,8 +31,24 @@ const required = [
   ["current = int(self.balances[account]) if account in self.balances else 0", "safe first balance credit"],
   ["self.balances[account] = u256(0)", "checks-effects before transfer"],
   ["implementer_address = str(implementer)", "runtime address normalization"],
+  ["if kind == \"tree\": continue", "directory metadata exclusion"],
+  ["len(verdict.get(\"statuses\", [])) != len(item[\"obligations\"])", "complete semantic obligation coverage"],
+  ["item[\"certificate\"][\"outcome\"] == \"ACCEPTED\" and result == \"ACCEPT\"", "confirmed challenge preserves acceptance"],
+  ["def deposit_funding", "non-reverting value deposit boundary"],
+  ["def withdraw_funding", "unallocated funding recovery"],
+  ["available - value", "funding allocation debit"],
+  ["if item[\"escrow\"] < MIN_ESCROW", "minimum escrow before sealing"],
+  ["leader_value[\"statuses\"] == validator_value[\"statuses\"]", "validator agreement on obligation statuses"],
+  ["status not in {\"MET\", \"NOT_MET\", \"UNCERTAIN\"}", "bounded semantic status vocabulary"],
+  ["item[\"indeterminate_until\"] = now() + INDETERMINATE_REFUND_SECONDS", "challenge uncertainty refund clock"],
 ];
 const missing = required.filter(([needle]) => !source.includes(needle)).map(([, name]) => name);
+if ((source.match(/_Recipient\(Address\(account\)\)\.emit_transfer/g) || []).length !== 2) {
+  missing.push("both settlement and unallocated-funding EOA transfer paths");
+}
+if ((source.match(/len\(verdict\.get\("statuses", \[\]\)\) != len\(item\["obligations"\]\)/g) || []).length !== 2) {
+  missing.push("both assessment and challenge obligation-coverage gates");
+}
 if (missing.length) {
   console.error(`Protocol guard failed; missing: ${missing.join(", ")}`);
   process.exit(1);

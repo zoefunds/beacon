@@ -21,11 +21,16 @@ def set_time(vm, value):
 
 def open_release(contract, vm, terms):
     set_time(vm, "2026-10-01T10:00:00Z")
-    vm.sender, vm.value = terms["sponsor"], 2 * WEI
-    return contract.open_release(
+    vm.sender, vm.value = terms["sponsor"], 0
+    receipt = contract.open_release(
         terms["repo"], terms["ref"], terms["baseline"], terms["implementer"], "Session safety release",
         json.dumps(["The authorization boundary is preserved."]), json.dumps(["src"]), terms["seal_by"],
     )
+    vm.value = 2 * WEI
+    contract.deposit_funding()
+    vm.value = 0
+    contract.sponsor(1, 2 * WEI)
+    return receipt
 
 
 def test_open_release_freezes_terms_and_escrow(direct_deploy, direct_vm, terms):
@@ -41,7 +46,7 @@ def test_open_release_normalizes_genlayer_address_arguments(direct_deploy, direc
     contract = direct_deploy(Path("contract/contracts/beacon.py"))
     module = sys.modules[contract.__class__.__module__]
     set_time(direct_vm, "2026-10-01T10:00:00Z")
-    direct_vm.sender, direct_vm.value = terms["sponsor"], 2 * WEI
+    direct_vm.sender, direct_vm.value = terms["sponsor"], 0
     contract.open_release(
         terms["repo"], terms["ref"], terms["baseline"], module.Address(terms["implementer"]), "Address boundary",
         '["Normalize the runtime address type."]', '["src"]', terms["seal_by"],
@@ -53,14 +58,43 @@ def test_only_draft_state_accepts_new_sponsorship(direct_deploy, direct_vm, term
     contract = direct_deploy(Path("contract/contracts/beacon.py"))
     open_release(contract, direct_vm, terms)
     direct_vm.sender, direct_vm.value = "0x3333333333333333333333333333333333333333", WEI
-    assert contract.sponsor(1) == "funded"
+    assert contract.deposit_funding() == str(WEI)
+    direct_vm.value = 0
+    assert contract.sponsor(1, WEI) == "funded"
     assert json.loads(contract.get_release(1))["escrow"] == 3 * WEI
 
 
-def test_invalid_scope_and_insufficient_escrow_fail(direct_deploy, direct_vm, terms):
+def test_value_deposit_is_recorded_before_allocation_and_remains_recoverable(direct_deploy, direct_vm, terms):
+    contract = direct_deploy(Path("contract/contracts/beacon.py"))
+    direct_vm.sender, direct_vm.value = terms["sponsor"], WEI
+    assert contract.deposit_funding() == str(WEI)
+    assert int(contract.get_funding_balance(terms["sponsor"])) == WEI
+    direct_vm.value = 0
+    with pytest.raises(Exception):
+        contract.sponsor(999, WEI)
+    assert int(contract.get_funding_balance(terms["sponsor"])) == WEI
+    transfers = []
+    module = sys.modules[contract.__class__.__module__]
+    module._Recipient = lambda address: type("Receiver", (), {"emit_transfer": lambda self, value: transfers.append(int(value))})()
+    assert contract.withdraw_funding() == str(WEI)
+    assert transfers == [WEI]
+    assert int(contract.get_funding_balance(terms["sponsor"])) == 0
+
+
+def test_unfunded_release_cannot_be_sealed(direct_deploy, direct_vm, terms):
     contract = direct_deploy(Path("contract/contracts/beacon.py"))
     set_time(direct_vm, "2026-10-01T10:00:00Z")
-    direct_vm.sender, direct_vm.value = terms["sponsor"], WEI - 1
+    direct_vm.sender, direct_vm.value = terms["sponsor"], 0
+    contract.open_release(terms["repo"], terms["ref"], terms["baseline"], terms["implementer"], "Unfunded", '["ok"]', '["src"]', terms["seal_by"])
+    direct_vm.sender = terms["implementer"]
+    with pytest.raises(Exception):
+        contract.seal_release(1, "b" * 40)
+
+
+def test_invalid_scope_fails_before_any_funding_is_attached(direct_deploy, direct_vm, terms):
+    contract = direct_deploy(Path("contract/contracts/beacon.py"))
+    set_time(direct_vm, "2026-10-01T10:00:00Z")
+    direct_vm.sender, direct_vm.value = terms["sponsor"], 0
     with pytest.raises(Exception):
         contract.open_release(terms["repo"], terms["ref"], terms["baseline"], terms["implementer"], "x", '["a"]', '["../escape"]', terms["seal_by"])
 
@@ -253,6 +287,87 @@ def test_truncated_inventory_fails_closed(direct_deploy, direct_vm, terms):
     stored = json.loads(contract.get_release(1))
     assert stored["inventory_count"] == 0
     assert stored["blockers"] == ["incomplete_tree_inventory"]
+
+
+def test_directory_nodes_are_navigation_not_unsupported_evidence(direct_deploy, direct_vm, terms):
+    contract = direct_deploy(Path("contract/contracts/beacon.py"))
+    open_release(contract, direct_vm, terms)
+    item = json.loads(contract.get_release(1))
+    item.update({"state": "INVENTORY", "seal": {"tree": "b" * 40}, "inventory_discovered": False})
+    contract.releases[1] = json.dumps(item)
+    module = sys.modules[contract.__class__.__module__]
+    original = module.read_json
+    module.read_json = lambda _url: {"sha": "b" * 40, "truncated": False, "tree": [
+        {"path": "src", "type": "tree", "sha": "c" * 40, "size": 0},
+        {"path": "src/a.py", "type": "blob", "sha": "d" * 40, "size": 8},
+    ]}
+    try:
+        result = json.loads(contract.discover_inventory(1))
+    finally:
+        module.read_json = original
+    assert result == {"blockers": [], "inventory_count": 1}
+    assert json.loads(contract.get_entry(1, 0))["path"] == "src/a.py"
+
+
+def test_incomplete_obligation_statuses_cannot_accept(direct_deploy, direct_vm, terms):
+    contract = direct_deploy(Path("contract/contracts/beacon.py"))
+    open_release(contract, direct_vm, terms)
+    item = json.loads(contract.get_release(1))
+    item.update({"state": "MATERIALIZED", "obligations": ["first", "second"], "inventory_count": 1, "materialized_count": 1})
+    contract.releases[1] = json.dumps(item)
+    contract.entries["1:entry:0"] = json.dumps({"path": "src/a.py", "blob": "a" * 40, "size": 8, "class": "TEXT", "status": "VERIFIED", "text": "VALUE=1"})
+    contract.build_review_graph(1)
+    module = sys.modules[contract.__class__.__module__]
+    original = module.result_from_model
+    module.result_from_model = lambda _prompt: {"result": "ACCEPT", "statuses": ["met"], "rationale": "omitted second obligation"}
+    try:
+        assessment = json.loads(contract.assess_component(1, 0))
+    finally:
+        module.result_from_model = original
+    assert assessment["result"] == "UNCERTAIN"
+    assert json.loads(contract.propose(1))["outcome"] == "INDETERMINATE"
+
+
+def test_confirmed_acceptance_challenge_preserves_acceptance(direct_deploy, direct_vm, terms):
+    contract = direct_deploy(Path("contract/contracts/beacon.py"))
+    open_release(contract, direct_vm, terms)
+    item = json.loads(contract.get_release(1))
+    item.update({"state": "REVIEW", "inventory_count": 1, "certificate": {"outcome": "ACCEPTED"}, "challenge_until": 1893456000})
+    contract.releases[1] = json.dumps(item)
+    contract.entries["1:entry:0"] = json.dumps({"path": "src/a.py", "status": "VERIFIED", "text": "VALUE=1"})
+    direct_vm.sender = terms["sponsor"]
+    contract.challenge_certificate(1, 0, "recheck accepted evidence")
+    module = sys.modules[contract.__class__.__module__]
+    original = module.result_from_model
+    module.result_from_model = lambda _prompt: {"result": "ACCEPT", "statuses": ["MET"], "rationale": "still valid"}
+    try:
+        certificate = json.loads(contract.review_challenge(1))
+    finally:
+        module.result_from_model = original
+    assert certificate["outcome"] == "ACCEPTED"
+
+
+def test_challenge_missing_statuses_fails_closed_and_starts_seven_day_clock(direct_deploy, direct_vm, terms):
+    contract = direct_deploy(Path("contract/contracts/beacon.py"))
+    open_release(contract, direct_vm, terms)
+    item = json.loads(contract.get_release(1))
+    item.update({"state": "REVIEW", "inventory_count": 1, "certificate": {"outcome": "ACCEPTED"}, "challenge_until": 1893456000})
+    contract.releases[1] = json.dumps(item)
+    contract.entries["1:entry:0"] = json.dumps({"path": "src/a.py", "status": "VERIFIED", "text": "VALUE=1"})
+    direct_vm.sender = terms["sponsor"]
+    contract.challenge_certificate(1, 0, "recheck incomplete semantic output")
+    module = sys.modules[contract.__class__.__module__]
+    original = module.result_from_model
+    module.result_from_model = lambda _prompt: {"result": "ACCEPT", "statuses": [], "rationale": "missing status"}
+    try:
+        certificate = json.loads(contract.review_challenge(1))
+    finally:
+        module.result_from_model = original
+    stored = json.loads(contract.get_release(1))
+    assert certificate["outcome"] == "INDETERMINATE"
+    assert stored["indeterminate_until"] - stored["challenge_until"] == 7 * 24 * 60 * 60
+    with pytest.raises(Exception):
+        contract.refund_indeterminate(1)
 
 
 def test_unresolved_dependency_and_inconsistent_assessment_cannot_accept(direct_deploy, direct_vm, terms):

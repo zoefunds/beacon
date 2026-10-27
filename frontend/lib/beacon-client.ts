@@ -15,6 +15,18 @@ export type BeaconTransaction = { hash: `0x${string}`; receipt: unknown; release
 type ReceiptStatus = NonNullable<Parameters<ReturnType<typeof createClient>["waitForTransactionReceipt"]>[0]["status"]>;
 const FINALIZED_STATUS = "FINALIZED" as ReceiptStatus;
 
+export function assertSuccessfulFinalizedReceipt(receipt: unknown) {
+  const record = receipt && typeof receipt === "object" ? receipt as Record<string, unknown> : {};
+  const resultName = record.result_name;
+  if (resultName && resultName !== "MAJORITY_AGREE") throw new Error(`Transaction finalized with ${String(resultName)}`);
+  const consensus = record.consensus_data && typeof record.consensus_data === "object" ? record.consensus_data as Record<string, unknown> : null;
+  const leaderReceipts = consensus && Array.isArray(consensus.leader_receipt) ? consensus.leader_receipt : [];
+  const leader = leaderReceipts[0] && typeof leaderReceipts[0] === "object" ? leaderReceipts[0] as Record<string, unknown> : null;
+  if (leader && leader.execution_result !== "SUCCESS") throw new Error("Transaction reached consensus but contract execution rolled back");
+  const leaderResult = leader?.result && typeof leader.result === "object" ? leader.result as Record<string, unknown> : null;
+  if (leaderResult && leaderResult.status !== "return") throw new Error(`Contract execution ended with ${String(leaderResult.status || "an error")}`);
+}
+
 export function contractAddress(): `0x${string}` | null {
   const value = process.env.NEXT_PUBLIC_BEACON_CONTRACT_ADDRESS;
   return value && /^0x[0-9a-fA-F]{40}$/.test(value) ? value as `0x${string}` : null;
@@ -54,6 +66,13 @@ export async function fetchBalance(account: string): Promise<bigint> {
   const address = contractAddress();
   if (!address) throw new Error("Beacon contract address is not configured");
   const value = await beaconReader().readContract({ address, functionName: "get_balance", args: [account] });
+  return BigInt(String(value));
+}
+
+export async function fetchFundingBalance(account: string): Promise<bigint> {
+  const address = contractAddress();
+  if (!address) throw new Error("Beacon contract address is not configured");
+  const value = await beaconReader().readContract({ address, functionName: "get_funding_balance", args: [account] });
   return BigInt(String(value));
 }
 
@@ -99,8 +118,7 @@ export async function writeBeacon(input: {
   const client = beaconWriter(input.account, input.provider);
   const hash = await client.writeContract({ address, functionName: input.functionName, args: input.args || [], value: input.value || 0n }) as `0x${string}` & { length: 66 };
   const receipt = await client.waitForTransactionReceipt({ hash, status: FINALIZED_STATUS });
-  const resultName = (receipt as { result_name?: string }).result_name;
-  if (resultName && resultName !== "MAJORITY_AGREE") throw new Error(`Transaction finalized with ${resultName}`);
+  assertSuccessfulFinalizedReceipt(receipt);
   return { hash, receipt, releaseId: findReleaseId(receipt) };
 }
 
@@ -108,11 +126,21 @@ export async function openRelease(input: {
   account: `0x${string}`; provider: Eip1193Provider; repo: string; ref: string; baseline: string;
   implementer: string; title: string; obligations: string[]; scope: string[]; sealBy: number; escrowWei: bigint;
 }) {
-  return writeBeacon({
+  const opened = await writeBeacon({
     account: input.account,
     provider: input.provider,
     functionName: "open_release",
     args: [input.repo, input.ref, input.baseline, input.implementer, input.title, JSON.stringify(input.obligations), JSON.stringify(input.scope), BigInt(input.sealBy)],
-    value: input.escrowWei,
   });
+  if (opened.releaseId === undefined) throw new Error("Agreement finalized without a release identifier; no GEN was deposited");
+  const funded = await fundRelease({ account: input.account, provider: input.provider, releaseId: opened.releaseId, amount: input.escrowWei });
+  return { ...funded, releaseId: opened.releaseId };
+}
+
+export async function fundRelease(input: {
+  account: `0x${string}`; provider: Eip1193Provider; releaseId: bigint; amount: bigint;
+}) {
+  if (input.amount <= 0n) throw new Error("Funding amount must be positive");
+  await writeBeacon({ account: input.account, provider: input.provider, functionName: "deposit_funding", value: input.amount });
+  return writeBeacon({ account: input.account, provider: input.provider, functionName: "sponsor", args: [input.releaseId, input.amount] });
 }

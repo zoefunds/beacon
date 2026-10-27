@@ -1,12 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { fetchBalance, formatGen, writeBeacon } from "@/lib/beacon-client";
+import { fetchBalance, fetchFundingBalance, formatGen, writeBeacon } from "@/lib/beacon-client";
 import { connectStudionet } from "@/lib/wallet";
 
 export default function Vault() {
   const [account, setAccount] = useState<`0x${string}` | null>(null);
   const [balance, setBalance] = useState(0n);
+  const [fundingBalance, setFundingBalance] = useState(0n);
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState("Connect the wallet that owns a Beacon credit balance.");
 
@@ -14,9 +15,19 @@ export default function Vault() {
     setPending(true);
     try {
       const current = await connectStudionet();
-      const amount = await fetchBalance(current);
-      setAccount(current); setBalance(amount); setMessage("Balance loaded from the Beacon contract.");
+      const [amount, funding] = await Promise.all([fetchBalance(current), fetchFundingBalance(current)]);
+      setAccount(current); setBalance(amount); setFundingBalance(funding); setMessage("Balances loaded from the Beacon contract.");
     } catch (error) { setMessage(error instanceof Error ? error.message : "Unable to load vault"); }
+    finally { setPending(false); }
+  }
+
+  async function withdrawFunding() {
+    if (!account || !window.ethereum) return;
+    setPending(true); setMessage("Waiting for unallocated funding withdrawal finality…");
+    try {
+      const transaction = await writeBeacon({ account, provider: window.ethereum, functionName: "withdraw_funding" });
+      const amount = await fetchFundingBalance(account); setFundingBalance(amount); setMessage(`Funding withdrawal finalized · ${transaction.hash.slice(0, 14)}…`);
+    } catch (error) { setMessage(error instanceof Error ? error.message : "Funding withdrawal failed"); }
     finally { setPending(false); }
   }
 
@@ -36,7 +47,8 @@ export default function Vault() {
     <section className="panel vaultPagePanel">
       <div><span>CONNECTED ACCOUNT</span><code>{account || "Not connected"}</code></div>
       <div><span>AVAILABLE CREDIT</span><strong>{formatGen(balance)} GEN</strong></div>
-      <div className="vaultActions"><button onClick={connect} disabled={pending}>{account ? "Refresh balance" : "Connect wallet"}</button><button onClick={withdraw} disabled={pending || !account || balance === 0n}>Withdraw credit</button></div>
+      <div><span>UNALLOCATED FUNDING</span><strong>{formatGen(fundingBalance)} GEN</strong></div>
+      <div className="vaultActions"><button onClick={connect} disabled={pending}>{account ? "Refresh balances" : "Connect wallet"}</button><button onClick={withdraw} disabled={pending || !account || balance === 0n}>Withdraw credit</button><button onClick={withdrawFunding} disabled={pending || !account || fundingBalance === 0n}>Withdraw unallocated funding</button></div>
       <p className="muted" role="status">{message}</p>
     </section>
   </main>;

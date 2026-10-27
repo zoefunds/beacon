@@ -77,3 +77,20 @@ def test_component_graph_and_inventory_are_bounded_and_idempotent():
     assert 'item.get("inventory_discovered")' in text
     assert 'self.components[self._key(release_id, "component", index)]' in text
     assert 'item["component_count"] = min(len(ordered_groups), MAX_COMPONENTS)' in text
+
+
+def test_directory_metadata_status_coverage_and_challenge_confirmation_are_guarded():
+    text = source()
+    assert 'if kind == "tree": continue' in text
+    assert 'len(verdict.get("statuses", [])) != len(item["obligations"])' in text
+    assert 'item["certificate"]["outcome"] == "ACCEPTED" and result == "ACCEPT"' in text
+
+
+def test_consensus_covers_status_vector_and_challenge_uncertainty_is_bounded():
+    text = source()
+    assert 'leader_value["statuses"] == validator_value["statuses"]' in text
+    assert 'status not in {"MET", "NOT_MET", "UNCERTAIN"}' in text
+    assert '" entries, in obligation order' in text
+    assert 'Never omit statuses' in text
+    assert 'statuses as an empty list' in text
+    assert text.count('item["indeterminate_until"] = now() + INDETERMINATE_REFUND_SECONDS') == 2

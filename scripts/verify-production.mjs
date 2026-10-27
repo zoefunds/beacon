@@ -1,5 +1,5 @@
 const origin = "https://bea-con.vercel.app";
-const routes = ["/", "/launch", "/attestations?release=2", "/vault"];
+const routes = ["/", "/launch", "/attestations?release=1", "/vault"];
 const pages = {};
 const scripts = new Set();
 
@@ -19,10 +19,11 @@ for (const url of scripts) {
 }
 
 const required = [
-  "0x48629d95C2b1e51790d12b3E55108e5902727D4c",
+  "0xeE34e10CF770aaDbfA9C369Eec946eb5c3D164E9",
   "FINALIZED",
   "seal_release",
   "sponsor",
+  "deposit_funding",
   "begin_inventory",
   "discover_inventory",
   "close_inventory",
@@ -37,6 +38,7 @@ const required = [
   "expire_unsealed",
   "refund_indeterminate",
   "withdraw",
+  "withdraw_funding",
   "Inspect every committed evidence record.",
   "Withdraw settled GEN safely.",
   "Indeterminate → sponsors after 7 days",
@@ -51,7 +53,7 @@ console.log(JSON.stringify({
   scriptCount: scripts.size,
   contract: required[0],
   finalizedReceiptHandling: true,
-  lifecycleOperations: required.slice(2, 18),
+  lifecycleOperations: required.slice(2, 20),
   dedicatedAttestationAndVaultRoutes: true,
   correctedIndeterminateRefundCopy: true,
 }, null, 2));

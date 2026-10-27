@@ -6,6 +6,7 @@ import {
   fetchComponent,
   fetchEdge,
   fetchEntry,
+  fundRelease,
   fetchRelease,
   formatGen,
   parseGen,
@@ -114,6 +115,20 @@ export function ReleaseMonitor({ onRelease }: Props) {
     finally { setPending(null); }
   }
 
+  async function sponsor() {
+    if (numericId === null) { setMessage("Watch a release first."); return; }
+    let amount: bigint;
+    try { amount = parseGen(sponsorAmount); } catch (error) { setMessage(error instanceof Error ? error.message : "Invalid amount"); return; }
+    setPending("Sponsor release"); setMessage("Sponsor release: finalizing the safe deposit before escrow allocation…");
+    try {
+      const current = account || await connectStudionet(); setAccount(current);
+      const transaction = await fundRelease({ account: current, provider: window.ethereum!, releaseId: numericId, amount });
+      setLatestTx(transaction.hash); setMessage(`Sponsor release finalized · ${transaction.hash.slice(0, 14)}…`);
+      await load(numericId, false); setBalance(await fetchBalance(current));
+    } catch (error) { setMessage(error instanceof Error ? error.message : "Sponsor release failed"); }
+    finally { setPending(null); }
+  }
+
   const state = String(release?.state || "");
   const certificate = objectValue(release?.certificate);
   const seal = objectValue(release?.seal);
@@ -165,7 +180,7 @@ export function ReleaseMonitor({ onRelease }: Props) {
         <h3>Available operations</h3>
         {state === "DRAFT" && <>
           <label>Additional sponsorship (GEN)<input value={sponsorAmount} onChange={event => setSponsorAmount(event.target.value)} /></label>
-          <button disabled={busy} onClick={() => { try { void act("Sponsor release", "sponsor", [numericId!], parseGen(sponsorAmount)); } catch (error) { setMessage(error instanceof Error ? error.message : "Invalid amount"); } }}>Sponsor</button>
+          <button disabled={busy} onClick={() => void sponsor()}>Sponsor</button>
           <label>Implementer commit<input value={commit} onChange={event => setCommit(event.target.value)} placeholder="40-character commit SHA" /></label>
           <button disabled={busy || !/^[0-9a-f]{40}$/i.test(commit)} onClick={() => act("Seal release", "seal_release", [numericId!, commit])}>Seal or replace seal</button>
           <button disabled={busy} onClick={() => act("Expire unsealed release", "expire_unsealed", [numericId!])}>Expire after deadline</button>

@@ -10,6 +10,7 @@ const fetchComponent = vi.fn();
 const fetchEdge = vi.fn();
 const interactionMocks = vi.hoisted(() => ({
   writeBeacon: vi.fn(),
+  fundRelease: vi.fn(),
   connectStudionet: vi.fn(async () => `0x${"1".repeat(40)}`),
 }));
 
@@ -22,6 +23,7 @@ vi.mock("@/lib/beacon-client", () => ({
   formatGen: (value: unknown) => (BigInt(String(value || 0)) / 10n ** 18n).toString(),
   parseGen: (value: string) => BigInt(value) * 10n ** 18n,
   writeBeacon: (...args: unknown[]) => interactionMocks.writeBeacon(...args),
+  fundRelease: (...args: unknown[]) => interactionMocks.fundRelease(...args),
 }));
 
 vi.mock("@/lib/wallet", () => ({ connectStudionet: () => interactionMocks.connectStudionet() }));
@@ -61,16 +63,17 @@ test("represents pending wallet consensus and only reports success after finalit
     component_count: 0, assessed_count: 0, edge_count: 0, reviewed_edges: 0, certificate: null, seal: null, challenge: null,
   });
   let finish!: (value: { hash: string; receipt: object }) => void;
-  interactionMocks.writeBeacon.mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));
+  interactionMocks.fundRelease.mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));
   Object.defineProperty(window, "ethereum", { configurable: true, value: { request: vi.fn() } });
   const user = userEvent.setup();
   render(<ReleaseMonitor />);
   await screen.findByText("DRAFT");
   await user.click(screen.getByRole("button", { name: "Sponsor" }));
-  expect(await screen.findByText(/waiting for wallet confirmation and consensus/i)).toBeTruthy();
+  expect(await screen.findByText(/finalizing the safe deposit before escrow allocation/i)).toBeTruthy();
   expect(screen.getByRole("button", { name: "Sponsor" })).toHaveProperty("disabled", true);
   finish({ hash: `0x${"b".repeat(64)}`, receipt: {} });
   expect(await screen.findByText(/Sponsor release finalized/i)).toBeTruthy();
+  expect(interactionMocks.fundRelease).toHaveBeenCalledWith(expect.objectContaining({ releaseId: 2n, amount: 10n ** 18n }));
 });
 
 test.each([
