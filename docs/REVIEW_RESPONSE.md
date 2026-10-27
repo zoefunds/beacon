@@ -2,14 +2,14 @@
 
 > Reproduction instructions verified 27 October 2026.
 
-Beacon's deployed implementation and evidence are reproducible from tag `reviewer-evidence-2026-10-26-v9`, commit `340ec008fc864feb817d5445c35c7cd06251574e`. Later documentation-only commits do not alter that deployed source.
+Beacon's deployed implementation and evidence are reproducible from tag `reviewer-evidence-2026-10-27-v10`, commit `05231dd9a989c8b7c1fa52fd9ec7203f9a0cb3e8`. Later documentation-only commits do not alter that deployed source.
 
 ## Verify locally
 
 ```sh
 git clone https://github.com/zoefunds/beacon.git
 cd beacon
-git checkout reviewer-evidence-2026-10-26-v9
+git checkout reviewer-evidence-2026-10-27-v10
 npm ci
 npm --prefix frontend ci
 python3 -m venv .venv

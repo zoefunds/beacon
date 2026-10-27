@@ -2,17 +2,17 @@
 
 > Evidence snapshot verified 27 October 2026.
 
-The canonical public review reference is `reviewer-evidence-2026-10-26-v9`. Start with [`../REVIEWER_SUBMISSION.md`](../REVIEWER_SUBMISSION.md) for direct source links and the complete Studionet transaction table.
+The canonical public review reference is `reviewer-evidence-2026-10-27-v10`. Start with [`../REVIEWER_SUBMISSION.md`](../REVIEWER_SUBMISSION.md) for direct source links and the complete Studionet transaction table.
 
 ## Artifact identity
 
 - Contract: `0xeE34e10CF770aaDbfA9C369Eec946eb5c3D164E9`
-- Reviewed commit: `340ec008fc864feb817d5445c35c7cd06251574e`
+- Reviewed commit: `05231dd9a989c8b7c1fa52fd9ec7203f9a0cb3e8`
 - Deployment: `0x4038cc6af9f83d30a7ac3daab2202a9da564bcb147046fb4405c5135ec41b4c8`
 - Source SHA-256: `4ae0e6a0fe1f55fc4ec72c0caf5901267a2f7b557ffec250e88f0d4c3bed8d46`
 - Source size: 36,764 bytes
 - Frontend: `https://bea-con.vercel.app/`
-- Vercel deployment: `dpl_CYJESrkxDLdxNNYo1E57WZP9gXjG`
+- Vercel deployment: `dpl_Ca4Zyxh7qJsq8BuE9Fz9YvifW1uB`
 
 The GenLayer Steward source fetcher retrieved and compiled the deployed contract and matched the local digest byte-for-byte. Its bundled SDK validation could not load the pinned runner archive; the direct repository `genvm-lint` run passed all 3 lint checks.
 
@@ -35,6 +35,6 @@ Transaction `0xce4a2ec175194e41331f83791e2bd1882343b85b4e017a4578a7e74cd17b983a`
 
 Tests cover incomplete and truncated inventories, missing or mismatched blobs, unsupported content, unresolved and ambiguous dependencies, import/edge/component/source bounds, incomplete assessments, invalid certificates, malformed status vectors, validator disagreement, unauthorized seal and challenge calls, premature and duplicate settlement, rejection routing, expiry, double withdrawal, value-safe funding, and exact seven-day indeterminate recovery.
 
-`npm run check` passes 38 protocol guards, 41 contract tests, 20 mutation controls, a production build, and 18 frontend tests. GenVM lint passes 3 checks and the production dependency audit reports 0 vulnerabilities.
+`npm run check` passes 38 protocol guards, 41 contract tests, 20 mutation controls, a production build, and 19 frontend tests. GenVM lint passes 3 checks and the production dependency audit reports 0 vulnerabilities.
 
 GitHub Actions is configured but cannot currently start jobs because of the repository owner's billing lock. No CI run is represented as passing.

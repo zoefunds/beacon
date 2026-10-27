@@ -11,7 +11,7 @@ console.log(JSON.stringify({
   repository: "https://github.com/zoefunds/beacon",
   commit: git("rev-parse", "HEAD"),
   frontendTree: git("rev-parse", "HEAD:frontend"),
-  reviewTag: "reviewer-evidence-2026-10-26-v9",
+  reviewTag: "reviewer-evidence-2026-10-27-v10",
   contract: {
     network: "GenLayer Studionet",
     chainId: 61999,
@@ -22,8 +22,8 @@ console.log(JSON.stringify({
   },
   frontend: {
     productionUrl: "https://bea-con.vercel.app/",
-    immutableUrl: "https://bea-lnvcqqt1m-adebiyi2002gmailcoms-projects.vercel.app",
-    deploymentId: "dpl_CYJESrkxDLdxNNYo1E57WZP9gXjG",
+    immutableUrl: "https://bea-kn5v54ets-adebiyi2002gmailcoms-projects.vercel.app",
+    deploymentId: "dpl_Ca4Zyxh7qJsq8BuE9Fz9YvifW1uB",
     attestation: "https://bea-con.vercel.app/attestations?release=1",
     vault: "https://bea-con.vercel.app/vault",
   },

@@ -1,6 +1,6 @@
 # Threat model
 
-> Threat model verified 27 October 2026 against `reviewer-evidence-2026-10-26-v9` and the completed release 1 trace.
+> Threat model verified 27 October 2026 against `reviewer-evidence-2026-10-27-v10` and the completed release 1 trace.
 
 Beacon assumes public Git hosts return a consistent API response to validators under GenLayer consensus. It does not trust a sponsor, implementer, browser, or semantic model to choose evidence selectively.
 
