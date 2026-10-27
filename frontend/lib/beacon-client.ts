@@ -1,4 +1,4 @@
-import { createClient } from "genlayer-js";
+import { abi, createClient } from "genlayer-js";
 import { studionet } from "genlayer-js/chains";
 import type { Eip1193Provider } from "./wallet";
 
@@ -89,17 +89,53 @@ export function formatGen(value: unknown): string {
   return fraction ? `${whole}.${fraction}` : whole.toString();
 }
 
-function findReleaseId(value: unknown): bigint | undefined {
+function base64Bytes(value: string): Uint8Array | null {
+  if (!/^[A-Za-z0-9+/]+={0,2}$/.test(value) || value.length % 4 !== 0) return null;
+  try {
+    const decoded = atob(value);
+    return Uint8Array.from(decoded, char => char.charCodeAt(0));
+  } catch { return null; }
+}
+
+function parsedJson(value: string): unknown | undefined {
+  try { return JSON.parse(value); } catch { return undefined; }
+}
+
+/** Extract a release id from both JSON views and GenVM's encoded write receipt. */
+export function findReleaseId(value: unknown, visited = new Set<object>()): bigint | undefined {
+  if (typeof value === "string") {
+    const parsed = parsedJson(value);
+    if (parsed !== undefined && parsed !== value) {
+      const found = findReleaseId(parsed, visited);
+      if (found !== undefined) return found;
+    }
+    const bytes = base64Bytes(value);
+    if (bytes) {
+      try {
+        const found = findReleaseId(abi.calldata.decode(bytes), visited);
+        if (found !== undefined) return found;
+      } catch { /* This string was not a GenVM calldata value. */ }
+    }
+    return undefined;
+  }
   if (!value || typeof value !== "object") return undefined;
+  if (visited.has(value)) return undefined;
+  visited.add(value);
+  if (value instanceof Map) {
+    const direct = value.get("release_id");
+    if (typeof direct === "number" || typeof direct === "string" || typeof direct === "bigint") return BigInt(direct);
+    for (const nested of value.values()) {
+      const found = findReleaseId(nested, visited);
+      if (found !== undefined) return found;
+    }
+    return undefined;
+  }
   if ("release_id" in value) {
     const candidate = (value as { release_id?: unknown }).release_id;
     if (typeof candidate === "number" || typeof candidate === "string" || typeof candidate === "bigint") return BigInt(candidate);
   }
   for (const nested of Object.values(value)) {
-    if (typeof nested === "string" && nested.includes("release_id")) {
-      try { const found = findReleaseId(JSON.parse(nested)); if (found !== undefined) return found; } catch { /* not JSON */ }
-    }
-    const found = findReleaseId(nested);
+    const found = findReleaseId(nested, visited);
     if (found !== undefined) return found;
   }
   return undefined;

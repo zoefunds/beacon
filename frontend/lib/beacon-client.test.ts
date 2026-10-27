@@ -7,13 +7,28 @@ const clientMocks = vi.hoisted(() => ({
 
 vi.mock("genlayer-js", () => ({ createClient: () => clientMocks }));
 
-import { assertSuccessfulFinalizedReceipt, formatGen, openRelease, parseGen, STUDIONET, writeBeacon } from "./beacon-client";
+import { assertSuccessfulFinalizedReceipt, findReleaseId, formatGen, openRelease, parseGen, STUDIONET, writeBeacon } from "./beacon-client";
 
 test("uses the official Studionet definition required for consensus writes", () => {
   expect(STUDIONET.id).toBe(61999);
   expect(STUDIONET.consensusMainContract?.address).toMatch(/^0x[0-9a-f]{40}$/i);
   expect(STUDIONET.defaultNumberOfInitialValidators).toBeGreaterThan(0);
   expect(STUDIONET.defaultConsensusMaxRotations).toBeGreaterThan(0);
+});
+
+test("extracts a release identifier from Studionet's finalized GenVM receipt", () => {
+  const receipt = {
+    consensus_data: {
+      leader_receipt: [{
+        result: {
+          raw: "AIQCeyJyZWxlYXNlX2lkIjoxLCJzdGF0ZSI6IkRSQUZUIn0=",
+          status: "return",
+          payload: { readable: "\"{\\\"release_id\\\":1,\\\"state\\\":\\\"DRAFT\\\"}\"" },
+        },
+      }],
+    },
+  };
+  expect(findReleaseId(receipt)).toBe(1n);
 });
 
 test("GEN parsing never uses floating point arithmetic", () => {
