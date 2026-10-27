@@ -11,12 +11,12 @@ console.log(JSON.stringify({
   repository: "https://github.com/zoefunds/beacon",
   commit: git("rev-parse", "HEAD"),
   frontendTree: git("rev-parse", "HEAD:frontend"),
-  reviewTag: "reviewer-evidence-2026-10-27-v11",
+  reviewTag: "reviewer-evidence-2026-10-27-v12",
   contract: {
     network: "GenLayer Studionet",
     chainId: 61999,
-    address: "0xeE34e10CF770aaDbfA9C369Eec946eb5c3D164E9",
-    deploymentTransaction: "0x4038cc6af9f83d30a7ac3daab2202a9da564bcb147046fb4405c5135ec41b4c8",
+    address: "0x3244f824cD071D564071AD5ad8207953a0A04Efb",
+    deploymentTransaction: "0xf5863c8d931f250430261570129a51ebb4f11c8251502b4c862ef4bc8497008c",
     sourceBytes: source.length,
     sourceSha256: createHash("sha256").update(source).digest("hex"),
   },
@@ -27,7 +27,7 @@ console.log(JSON.stringify({
     attestation: "https://bea-con.vercel.app/attestations?release=1",
     vault: "https://bea-con.vercel.app/vault",
   },
-  release1: {
+  historicalRelease1OnSupersededContract: {
     repository: "octocat/Spoon-Knife",
     commit: "d0dd1f61b33d64e29d8bc1372a94ef6a2fee76a9",
     tree: "d7cee29eaada459ba458a63ad983a89915c6a10a",

@@ -23,6 +23,7 @@ MAX_OBLIGATION_CHARS = 1000
 MAX_SCOPE_PATH_CHARS = 240
 MAX_COMPONENT_SOURCE_CHARS = 30000
 MAX_IMPORTS_PER_FILE = 32
+MAX_RUNTIME_CHECKS = 32
 
 TEXT_EXTENSIONS = {"py", "js", "jsx", "ts", "tsx", "json", "md", "yml", "yaml", "toml", "css", "html", "sh", "txt"}
 TERMINAL = {"ACCEPTED", "REJECTED", "EXPIRED", "REFUNDED"}
@@ -43,8 +44,15 @@ def wallet(value):
 def sha(value):
     return bool(re.fullmatch(r"[0-9a-fA-F]{40}", value or ""))
 
+def root(value):
+    return bool(re.fullmatch(r"[0-9a-fA-F]{64}", value or ""))
+
 def valid_seal(value):
-    return isinstance(value, dict) and all(sha(str(value.get(key, ""))) for key in ("commit", "tree", "baseline_tree", "observed_ref_head"))
+    return (isinstance(value, dict) and
+            all(sha(str(value.get(key, ""))) for key in ("commit", "tree", "baseline_tree", "observed_ref_head")) and
+            all(root(str(value.get(key, ""))) for key in ("change_root", "runtime_root")) and
+            isinstance(value.get("changes"), list) and isinstance(value.get("runtime_checks"), list) and
+            len(value["changes"]) <= MAX_PATHS and len(value["runtime_checks"]) <= MAX_RUNTIME_CHECKS)
 
 def repository(value):
     return bool(re.fullmatch(r"[A-Za-z0-9_.-]{1,100}/[A-Za-z0-9_.-]{1,100}", value or ""))
@@ -84,6 +92,11 @@ def result_from_model(prompt):
             statuses = [str(x).upper() for x in statuses]
             if any(status not in {"MET", "NOT_MET", "UNCERTAIN"} for status in statuses):
                 return None
+            # An obligation-bearing ACCEPT is internally consistent only when
+            # every ordered obligation status is MET. Edge verdicts carry an
+            # intentionally empty status vector and are handled separately.
+            if result == "ACCEPT" and statuses and any(status != "MET" for status in statuses):
+                return None
             return {"result": result, "statuses": statuses, "rationale": str(value.get("rationale", ""))[:1200]}
         except Exception:
             return None
@@ -103,6 +116,22 @@ def result_from_model(prompt):
         return gl.vm.run_nondet(leader, validator)
     except Exception:
         return None
+
+def obligation_verdict(verdict, expected):
+    """Normalize an obligation-bearing verdict and fail contradictory ACCEPT closed."""
+    if not isinstance(verdict, dict):
+        return {"result": "UNCERTAIN", "statuses": [], "rationale": "missing semantic verdict"}
+    result = str(verdict.get("result", "UNCERTAIN")).upper()
+    statuses = verdict.get("statuses", [])
+    if (result not in {"ACCEPT", "REJECT", "UNCERTAIN"} or not isinstance(statuses, list) or
+            len(statuses) != expected):
+        return {"result": "UNCERTAIN", "statuses": [], "rationale": "incomplete obligation coverage"}
+    statuses = [str(status).upper() for status in statuses]
+    if any(status not in {"MET", "NOT_MET", "UNCERTAIN"} for status in statuses):
+        return {"result": "UNCERTAIN", "statuses": [], "rationale": "invalid obligation status"}
+    if result == "ACCEPT" and any(status != "MET" for status in statuses):
+        return {"result": "UNCERTAIN", "statuses": statuses, "rationale": "ACCEPT requires every obligation status to be MET"}
+    return {"result": result, "statuses": statuses, "rationale": str(verdict.get("rationale", ""))[:1200]}
 
 def normalized_scope(raw):
     try: values = json.loads(raw)
@@ -228,11 +257,36 @@ class Beacon(gl.Contract):
         head = ((branch.get("commit") or {}).get("sha") or "").lower()
         compare = read_json(f"https://api.github.com/repos/{repo}/compare/{commit}...{head}")
         baseline_compare = read_json(f"https://api.github.com/repos/{repo}/compare/{item['baseline']}...{commit}")
+        checks_data = read_json(f"https://api.github.com/repos/{repo}/commits/{commit}/check-runs")
         baseline_tree = str(((baseline_data.get("commit") or {}).get("tree") or {}).get("sha", "")).lower()
         if str(commit_data.get("sha", "")).lower() != commit.lower() or str(baseline_data.get("sha", "")).lower() != item["baseline"] or not sha(tree) or not sha(head) or not sha(baseline_tree): return None
         if not isinstance(compare, dict) or str(((compare.get("merge_base_commit") or {}).get("sha") or "")).lower() != commit.lower(): return None
         if not isinstance(baseline_compare, dict) or str(((baseline_compare.get("merge_base_commit") or {}).get("sha") or "")).lower() != item["baseline"]: return None
-        return {"commit": commit.lower(), "tree": tree, "baseline_tree": baseline_tree, "observed_ref_head": head}
+        files = baseline_compare.get("files")
+        check_runs = (checks_data or {}).get("check_runs") if isinstance(checks_data, dict) else None
+        if not isinstance(files, list) or len(files) > MAX_PATHS or not isinstance(check_runs, list) or len(check_runs) > MAX_RUNTIME_CHECKS: return None
+        changes = []
+        for file in files:
+            filename = str((file or {}).get("filename", "")); previous = str((file or {}).get("previous_filename", ""))
+            if not path_ok(filename) or (previous and not path_ok(previous)): return None
+            if not in_scope(filename, item["scope"]) and not (previous and in_scope(previous, item["scope"])): continue
+            changes.append({"path": filename, "previous_path": previous, "status": str((file or {}).get("status", ""))[:24],
+                            "blob": str((file or {}).get("sha", "")).lower(), "additions": int((file or {}).get("additions", 0)),
+                            "deletions": int((file or {}).get("deletions", 0)), "changes": int((file or {}).get("changes", 0))})
+        if str(checks_data.get("head_sha", "")).lower() != commit.lower(): return None
+        runtime_checks = []
+        for check in check_runs:
+            runtime_checks.append({"name": str((check or {}).get("name", ""))[:120], "status": str((check or {}).get("status", ""))[:24],
+                                   "conclusion": str((check or {}).get("conclusion", ""))[:24],
+                                   "url": str((check or {}).get("html_url", ""))[:300]})
+        runtime_state = ("ABSENT" if not runtime_checks else
+                         ("PASS" if all(check["status"] == "completed" and check["conclusion"] == "success" for check in runtime_checks) else
+                          ("PENDING" if any(check["status"] != "completed" for check in runtime_checks) else "FAIL")))
+        return {"commit": commit.lower(), "tree": tree, "baseline_tree": baseline_tree, "observed_ref_head": head,
+                "changes": sorted(changes, key=lambda value: (value["path"], value["previous_path"])),
+                "runtime_checks": sorted(runtime_checks, key=lambda value: value["name"]), "runtime_state": runtime_state,
+                "change_root": digest(sorted(changes, key=lambda value: (value["path"], value["previous_path"]))),
+                "runtime_root": digest(sorted(runtime_checks, key=lambda value: value["name"]))}
 
     @gl.public.write
     def open_release(self, repo: str, ref: str, baseline: str, implementer: str, title: str, obligations_json: str, scope_json: str, seal_by: int) -> str:
@@ -423,10 +477,12 @@ class Beacon(gl.Contract):
                       "result must be ACCEPT, REJECT, or UNCERTAIN. statuses must contain exactly " + str(len(item["obligations"])) +
                       " entries, in obligation order, using only MET, NOT_MET, or UNCERTAIN. Never omit statuses. Example shape: " +
                       canonical({"result": "ACCEPT", "statuses": status_example, "rationale": "brief evidence-based reason"}) +
-                      " Obligations: " + canonical(item["obligations"]) + " Component source: " + source)
-            verdict = result_from_model(prompt) or {"result": "UNCERTAIN"}
-            if len(verdict.get("statuses", [])) != len(item["obligations"]): verdict = {"result": "UNCERTAIN", "statuses": [], "rationale": "incomplete obligation coverage"}
-            component["assessment"] = {"result": str(verdict.get("result", "UNCERTAIN")).upper(), "statuses": verdict.get("statuses", []), "rationale": verdict.get("rationale", "")}
+                      " ACCEPT is valid only when every status is MET. Obligations: " + canonical(item["obligations"]) +
+                      " Baseline-to-release changes: " + canonical((item.get("seal") or {}).get("changes", [])) +
+                      " Public commit checks: " + canonical({"state": (item.get("seal") or {}).get("runtime_state", "ABSENT"), "checks": (item.get("seal") or {}).get("runtime_checks", [])}) +
+                      " Component source: " + source)
+            verdict = obligation_verdict(result_from_model(prompt), len(item["obligations"]))
+            component["assessment"] = verdict
         component["status"] = component["assessment"]["result"]
         item["assessed_count"] += 1; self.components[key] = canonical(component); self._save(release_id, item); return canonical(component["assessment"])
 
@@ -454,14 +510,17 @@ class Beacon(gl.Contract):
     def propose(self, release_id: u256) -> str:
         item = self._load(release_id); self._require(item, "ATTESTING")
         if item["assessed_count"] != item["component_count"] or item["reviewed_edges"] != item["edge_count"]: raise gl.vm.UserError("coverage_incomplete")
-        results = []; inventory = []; assessments = []; reviewed_edges = []
+        results = []; inventory = []; assessments = []; reviewed_edges = []; obligation_vectors = []
         for i in range(item["inventory_count"]):
             entry = json.loads(self.entries[self._key(release_id, "entry", i)]); inventory.append({k: entry.get(k) for k in ("path", "blob", "size", "class", "status")})
         for i in range(item["component_count"]):
-            component = json.loads(self.components[self._key(release_id, "component", i)]); assessments.append(component); results.append(component.get("assessment", {}).get("result", "BLOCKED"))
+            component = json.loads(self.components[self._key(release_id, "component", i)]); assessments.append(component)
+            assessment = component.get("assessment", {}); results.append(assessment.get("result", "BLOCKED")); obligation_vectors.append(assessment.get("statuses", []))
         for i in range(item["edge_count"]): reviewed_edges.append(json.loads(self.edges[self._key(release_id, "edge", i)]))
         edge_results = [edge.get("status", "BLOCKED") for edge in reviewed_edges]
-        accepted = not item["blockers"] and results and all(x == "ACCEPT" for x in results) and all(x == "ACCEPT" for x in edge_results)
+        all_obligations_met = bool(obligation_vectors) and all(len(vector) == len(item["obligations"]) and all(status == "MET" for status in vector) for vector in obligation_vectors)
+        runtime_evidence_passed = bool((item.get("seal") or {}).get("runtime_checks")) and (item.get("seal") or {}).get("runtime_state") == "PASS"
+        accepted = not item["blockers"] and results and all(x == "ACCEPT" for x in results) and all_obligations_met and runtime_evidence_passed and all(x == "ACCEPT" for x in edge_results)
         rejected = "REJECT" in results or "REJECT" in edge_results
         outcome = "ACCEPTED" if accepted else ("REJECTED" if rejected else "INDETERMINATE")
         agreement = {key: item[key] for key in ("id", "repo", "ref", "baseline", "implementer", "sponsors", "escrow", "title", "obligations", "scope", "seal_by")}
@@ -507,18 +566,35 @@ class Beacon(gl.Contract):
     @gl.public.write
     def review_challenge(self, release_id: u256) -> str:
         item = self._load(release_id); self._require(item, "CHALLENGED")
-        challenge = item["challenge"]; entry = json.loads(self.entries[self._key(release_id, "entry", challenge["entry_index"])] or "{}")
-        prompt = "Reassess a sealed release certificate challenge using only the committed entry. Reply JSON with result ACCEPT|REJECT|UNCERTAIN and one status per obligation using only MET|NOT_MET|UNCERTAIN. Obligations: " + canonical(item["obligations"]) + " Certificate outcome: " + item["certificate"]["outcome"] + " Challenge: " + challenge["reason"] + " Path: " + challenge["path"] + " Source: " + entry.get("text", "")
-        verdict = result_from_model(prompt) or {"result": "UNCERTAIN"}
-        if len(verdict.get("statuses", [])) != len(item["obligations"]): verdict = {"result": "UNCERTAIN", "statuses": [], "rationale": "incomplete obligation coverage"}
-        result = str(verdict.get("result", "UNCERTAIN")).upper()
-        # A challenge can invalidate an acceptance, but one rechecked entry
-        # cannot manufacture a global acceptance from a prior rejection.
-        if item["certificate"]["outcome"] == "ACCEPTED" and result == "ACCEPT": item["certificate"]["outcome"] = "ACCEPTED"
+        challenge = item["challenge"]; challenged_index = challenge["entry_index"]
+        component = None
+        for index in range(item["component_count"]):
+            candidate = json.loads(self.components[self._key(release_id, "component", index)] or "{}")
+            if challenged_index in candidate.get("entries", []): component = candidate; break
+        context_entries = [] if not component else [json.loads(self.entries[self._key(release_id, "entry", index)] or "{}") for index in component.get("entries", [])]
+        context_paths = {entry.get("path", "") for entry in context_entries}
+        context_edges = []
+        for index in range(item["edge_count"]):
+            edge = json.loads(self.edges[self._key(release_id, "edge", index)] or "{}")
+            if edge.get("from") in context_paths or edge.get("to") in context_paths: context_edges.append(edge)
+        challenge_packet = {"obligations": item["obligations"], "certificate_outcome": item["certificate"]["outcome"],
+                            "challenge": challenge, "component_sources": [{"path": entry.get("path", ""), "text": entry.get("text", "")} for entry in context_entries],
+                            "dependency_edges": context_edges, "baseline_changes": (item.get("seal") or {}).get("changes", []),
+                            "runtime": {"state": (item.get("seal") or {}).get("runtime_state", "ABSENT"), "checks": (item.get("seal") or {}).get("runtime_checks", [])}}
+        if not component or not context_entries or len(canonical(challenge_packet)) > MAX_COMPONENT_SOURCE_CHARS:
+            verdict = {"result": "UNCERTAIN", "statuses": [], "rationale": "challenge context unavailable or oversized"}
+        else:
+            prompt = "Reassess this sealed release certificate challenge with its complete deterministic component, dependency, baseline-change, and runtime-check context. Reply JSON with result ACCEPT|REJECT|UNCERTAIN and exactly one status per obligation using only MET|NOT_MET|UNCERTAIN. ACCEPT is valid only when every status is MET. Evidence: " + canonical(challenge_packet)
+            verdict = obligation_verdict(result_from_model(prompt), len(item["obligations"]))
+        result = verdict["result"]
+        all_obligations_met = len(verdict["statuses"]) == len(item["obligations"]) and all(status == "MET" for status in verdict["statuses"])
+        # A challenge can invalidate an acceptance, but cannot manufacture a
+        # global acceptance from a prior rejection.
+        if item["certificate"]["outcome"] == "ACCEPTED" and result == "ACCEPT" and all_obligations_met: item["certificate"]["outcome"] = "ACCEPTED"
         elif item["certificate"]["outcome"] == "ACCEPTED" and result == "REJECT": item["certificate"]["outcome"] = "REJECTED"
         elif item["certificate"]["outcome"] == "REJECTED" and result == "REJECT": item["certificate"]["outcome"] = "REJECTED"
         else: item["certificate"]["outcome"] = "INDETERMINATE"
-        item["certificate"]["challenge"] = {"path": challenge["path"], "result": result}
+        item["certificate"]["challenge"] = {"path": challenge["path"], "result": result, "statuses": verdict["statuses"], "context_root": digest(challenge_packet)}
         item["state"] = "REVIEW"; item["challenge_until"] = now()
         if item["certificate"]["outcome"] == "INDETERMINATE": item["indeterminate_until"] = now() + INDETERMINATE_REFUND_SECONDS
         self._save(release_id, item)

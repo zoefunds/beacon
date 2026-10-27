@@ -39,11 +39,12 @@ def test_python_relative_and_multiple_imports_are_found_and_resolved():
     assert helpers["local_reference"]("pkg/a.py", "pkg.missing", available)
 
 
-def test_seal_requires_all_four_commit_identifiers():
+def test_seal_requires_commit_identifiers_and_evidence_roots():
     tree = ast.parse((Path(__file__).parents[1] / "contracts" / "beacon.py").read_text())
-    nodes = [item for item in tree.body if isinstance(item, ast.FunctionDef) and item.name in {"sha", "valid_seal"}]
-    namespace = {"re": re}
+    nodes = [item for item in tree.body if isinstance(item, ast.FunctionDef) and item.name in {"sha", "root", "valid_seal"}]
+    namespace = {"re": re, "MAX_PATHS": 192, "MAX_RUNTIME_CHECKS": 32}
     exec(compile(ast.Module(body=nodes, type_ignores=[]), "seal", "exec"), namespace)
     assert not namespace["valid_seal"]({})
     value = {key: "a" * 40 for key in ("commit", "tree", "baseline_tree", "observed_ref_head")}
+    value.update({"change_root": "b" * 64, "runtime_root": "c" * 64, "changes": [], "runtime_checks": []})
     assert namespace["valid_seal"](value)

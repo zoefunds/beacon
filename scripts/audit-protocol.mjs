@@ -32,8 +32,18 @@ const required = [
   ["self.balances[account] = u256(0)", "checks-effects before transfer"],
   ["implementer_address = str(implementer)", "runtime address normalization"],
   ["if kind == \"tree\": continue", "directory metadata exclusion"],
-  ["len(verdict.get(\"statuses\", [])) != len(item[\"obligations\"])", "complete semantic obligation coverage"],
+  ["len(statuses) != expected", "complete semantic obligation coverage"],
+  ["result == \"ACCEPT\" and statuses and any(status != \"MET\" for status in statuses)", "model-level contradictory ACCEPT rejection"],
+  ["result == \"ACCEPT\" and any(status != \"MET\" for status in statuses)", "obligation verdict contradictory ACCEPT rejection"],
+  ["and all_obligations_met and runtime_evidence_passed and all(x == \"ACCEPT\" for x in edge_results)", "certificate-level all-MET aggregation gate"],
   ["item[\"certificate\"][\"outcome\"] == \"ACCEPTED\" and result == \"ACCEPT\"", "confirmed challenge preserves acceptance"],
+  ["item[\"certificate\"][\"outcome\"] == \"ACCEPTED\" and result == \"ACCEPT\" and all_obligations_met", "challenge all-MET preservation gate"],
+  ["component_sources", "complete component challenge context"],
+  ["dependency_edges", "dependency-aware challenge context"],
+  ["\"change_root\": digest", "baseline change evidence commitment"],
+  ["\"runtime_root\": digest", "runtime check evidence commitment"],
+  ["/check-runs", "public runtime check discovery"],
+  ["runtime_evidence_passed", "successful runtime evidence acceptance gate"],
   ["def deposit_funding", "non-reverting value deposit boundary"],
   ["def withdraw_funding", "unallocated funding recovery"],
   ["available - value", "funding allocation debit"],
@@ -45,9 +55,6 @@ const required = [
 const missing = required.filter(([needle]) => !source.includes(needle)).map(([, name]) => name);
 if ((source.match(/_Recipient\(Address\(account\)\)\.emit_transfer/g) || []).length !== 2) {
   missing.push("both settlement and unallocated-funding EOA transfer paths");
-}
-if ((source.match(/len\(verdict\.get\("statuses", \[\]\)\) != len\(item\["obligations"\]\)/g) || []).length !== 2) {
-  missing.push("both assessment and challenge obligation-coverage gates");
 }
 if (missing.length) {
   console.error(`Protocol guard failed; missing: ${missing.join(", ")}`);

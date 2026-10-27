@@ -34,6 +34,9 @@ def test_positive_outcome_requires_full_coverage_and_zero_blockers():
     assert "coverage_incomplete" in text
     assert 'not item["blockers"]' in text
     assert 'all(x == "ACCEPT" for x in results)' in text
+    assert 'all_obligations_met' in text
+    assert 'all(status == "MET" for status in vector)' in text
+    assert 'runtime_evidence_passed' in text
     assert 'all(x == "ACCEPT" for x in edge_results)' in text
     assert '"edge_root": digest(reviewed_edges)' in text
 
@@ -82,7 +85,7 @@ def test_component_graph_and_inventory_are_bounded_and_idempotent():
 def test_directory_metadata_status_coverage_and_challenge_confirmation_are_guarded():
     text = source()
     assert 'if kind == "tree": continue' in text
-    assert 'len(verdict.get("statuses", [])) != len(item["obligations"])' in text
+    assert 'len(statuses) != expected' in text
     assert 'item["certificate"]["outcome"] == "ACCEPTED" and result == "ACCEPT"' in text
 
 
@@ -94,3 +97,18 @@ def test_consensus_covers_status_vector_and_challenge_uncertainty_is_bounded():
     assert 'Never omit statuses' in text
     assert 'statuses as an empty list' in text
     assert text.count('item["indeterminate_until"] = now() + INDETERMINATE_REFUND_SECONDS') == 2
+
+
+def test_accept_requires_all_met_at_model_component_certificate_and_challenge_layers():
+    text = source()
+    assert 'result == "ACCEPT" and statuses and any(status != "MET" for status in statuses)' in text
+    assert 'result == "ACCEPT" and any(status != "MET" for status in statuses)' in text
+    assert 'all(status == "MET" for status in vector)' in text
+    assert 'and all_obligations_met' in text
+
+
+def test_seal_and_challenge_bind_baseline_runtime_component_and_dependency_context():
+    text = source()
+    assert 'change_root' in text and 'runtime_root' in text and '/check-runs' in text
+    assert 'component_sources' in text and 'dependency_edges' in text
+    assert 'context_root' in text

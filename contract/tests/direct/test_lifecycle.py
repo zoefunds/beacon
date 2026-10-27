@@ -54,6 +54,31 @@ def test_open_release_normalizes_genlayer_address_arguments(direct_deploy, direc
     assert json.loads(contract.get_release(1))["implementer"] == terms["implementer"]
 
 
+def test_seal_binds_scoped_baseline_changes_and_runtime_checks(direct_deploy, direct_vm, terms):
+    contract = direct_deploy(Path("contract/contracts/beacon.py"))
+    module = sys.modules[contract.__class__.__module__]
+    item = {"repo": terms["repo"], "ref": terms["ref"], "baseline": terms["baseline"], "scope": ["src"]}
+    commit = "b" * 40
+    original = module.read_json
+    def response(url):
+        if "/branches/" in url: return {"commit": {"sha": commit}}
+        if url.endswith("/commits/" + commit): return {"sha": commit, "commit": {"tree": {"sha": "c" * 40}}}
+        if url.endswith("/commits/" + terms["baseline"]): return {"sha": terms["baseline"], "commit": {"tree": {"sha": "d" * 40}}}
+        if "/compare/" + commit + "..." + commit in url: return {"merge_base_commit": {"sha": commit}}
+        if "/compare/" + terms["baseline"] + "..." + commit in url: return {"merge_base_commit": {"sha": terms["baseline"]}, "files": [{"filename": "src/a.py", "status": "modified", "sha": "e" * 40, "additions": 2, "deletions": 1, "changes": 3}]}
+        if url.endswith("/commits/" + commit + "/check-runs"): return {"head_sha": commit, "check_runs": [{"name": "tests", "status": "completed", "conclusion": "success", "html_url": "https://example.test/check"}]}
+        raise AssertionError(url)
+    module.read_json = response
+    try:
+        seal = contract._seal_source(item, commit)
+    finally:
+        module.read_json = original
+    assert module.valid_seal(seal)
+    assert seal["runtime_state"] == "PASS"
+    assert seal["changes"][0]["path"] == "src/a.py"
+    assert len(seal["change_root"]) == 64 and len(seal["runtime_root"]) == 64
+
+
 def test_only_draft_state_accepts_new_sponsorship(direct_deploy, direct_vm, terms):
     contract = direct_deploy(Path("contract/contracts/beacon.py"))
     open_release(contract, direct_vm, terms)
@@ -127,7 +152,7 @@ def test_graph_components_and_complete_acceptance_lifecycle(direct_deploy, direc
     contract = direct_deploy(Path("contract/contracts/beacon.py"))
     open_release(contract, direct_vm, terms)
     item = json.loads(contract.get_release(1))
-    item.update({"state": "MATERIALIZED", "inventory_count": 2, "materialized_count": 2})
+    item.update({"state": "MATERIALIZED", "inventory_count": 2, "materialized_count": 2, "seal": {"runtime_state": "PASS", "runtime_checks": [{"name": "tests", "status": "completed", "conclusion": "success"}]}})
     contract.releases[1] = json.dumps(item)
     contract.entries["1:entry:0"] = json.dumps({"path": "src/a.py", "blob": "a" * 40, "size": 20, "class": "TEXT", "status": "VERIFIED", "text": "import src.b"})
     contract.entries["1:entry:1"] = json.dumps({"path": "src/b.py", "blob": "b" * 40, "size": 8, "class": "TEXT", "status": "VERIFIED", "text": "VALUE = 1"})
@@ -328,13 +353,59 @@ def test_incomplete_obligation_statuses_cannot_accept(direct_deploy, direct_vm, 
     assert json.loads(contract.propose(1))["outcome"] == "INDETERMINATE"
 
 
+@pytest.mark.parametrize("status", ["NOT_MET", "UNCERTAIN"])
+def test_accept_with_non_met_status_cannot_create_accepted_certificate(direct_deploy, direct_vm, terms, status):
+    contract = direct_deploy(Path("contract/contracts/beacon.py"))
+    open_release(contract, direct_vm, terms)
+    item = json.loads(contract.get_release(1))
+    item.update({"state": "MATERIALIZED", "inventory_count": 1, "materialized_count": 1})
+    contract.releases[1] = json.dumps(item)
+    contract.entries["1:entry:0"] = json.dumps({"path": "src/a.py", "blob": "a" * 40, "size": 8, "class": "TEXT", "status": "VERIFIED", "text": "VALUE=1"})
+    contract.build_review_graph(1)
+    module = sys.modules[contract.__class__.__module__]
+    original = module.result_from_model
+    module.result_from_model = lambda _prompt: {"result": "ACCEPT", "statuses": [status], "rationale": "contradictory verdict"}
+    try:
+        assessment = json.loads(contract.assess_component(1, 0))
+    finally:
+        module.result_from_model = original
+    assert assessment["result"] == "UNCERTAIN"
+    assert assessment["statuses"] == [status]
+    assert json.loads(contract.propose(1))["outcome"] == "INDETERMINATE"
+
+
+@pytest.mark.parametrize("status", ["NOT_MET", "UNCERTAIN"])
+def test_certificate_aggregation_rechecks_every_obligation_status(direct_deploy, direct_vm, terms, status):
+    contract = direct_deploy(Path("contract/contracts/beacon.py"))
+    open_release(contract, direct_vm, terms)
+    item = json.loads(contract.get_release(1))
+    item.update({"state": "ATTESTING", "inventory_count": 1, "materialized_count": 1, "component_count": 1, "assessed_count": 1})
+    contract.releases[1] = json.dumps(item)
+    contract.entries["1:entry:0"] = json.dumps({"path": "src/a.py", "blob": "a" * 40, "size": 8, "class": "TEXT", "status": "VERIFIED"})
+    contract.components["1:component:0"] = json.dumps({"entries": [0], "paths": ["src/a.py"], "status": "ACCEPT", "assessment": {"result": "ACCEPT", "statuses": [status], "rationale": "forged contradictory assessment"}})
+    assert json.loads(contract.propose(1))["outcome"] == "INDETERMINATE"
+
+
+@pytest.mark.parametrize("runtime", [None, {"runtime_state": "ABSENT", "runtime_checks": []}, {"runtime_state": "PENDING", "runtime_checks": [{"name": "tests", "status": "in_progress", "conclusion": ""}]}, {"runtime_state": "FAIL", "runtime_checks": [{"name": "tests", "status": "completed", "conclusion": "failure"}]}])
+def test_missing_pending_or_failed_runtime_evidence_cannot_accept(direct_deploy, direct_vm, terms, runtime):
+    contract = direct_deploy(Path("contract/contracts/beacon.py"))
+    open_release(contract, direct_vm, terms)
+    item = json.loads(contract.get_release(1))
+    item.update({"state": "ATTESTING", "inventory_count": 1, "materialized_count": 1, "component_count": 1, "assessed_count": 1, "seal": runtime})
+    contract.releases[1] = json.dumps(item)
+    contract.entries["1:entry:0"] = json.dumps({"path": "src/a.py", "blob": "a" * 40, "size": 8, "class": "TEXT", "status": "VERIFIED"})
+    contract.components["1:component:0"] = json.dumps({"entries": [0], "paths": ["src/a.py"], "status": "ACCEPT", "assessment": {"result": "ACCEPT", "statuses": ["MET"], "rationale": "semantic pass"}})
+    assert json.loads(contract.propose(1))["outcome"] == "INDETERMINATE"
+
+
 def test_confirmed_acceptance_challenge_preserves_acceptance(direct_deploy, direct_vm, terms):
     contract = direct_deploy(Path("contract/contracts/beacon.py"))
     open_release(contract, direct_vm, terms)
     item = json.loads(contract.get_release(1))
-    item.update({"state": "REVIEW", "inventory_count": 1, "certificate": {"outcome": "ACCEPTED"}, "challenge_until": 1893456000})
+    item.update({"state": "REVIEW", "inventory_count": 1, "component_count": 1, "certificate": {"outcome": "ACCEPTED"}, "challenge_until": 1893456000})
     contract.releases[1] = json.dumps(item)
     contract.entries["1:entry:0"] = json.dumps({"path": "src/a.py", "status": "VERIFIED", "text": "VALUE=1"})
+    contract.components["1:component:0"] = json.dumps({"entries": [0], "paths": ["src/a.py"], "status": "ACCEPT"})
     direct_vm.sender = terms["sponsor"]
     contract.challenge_certificate(1, 0, "recheck accepted evidence")
     module = sys.modules[contract.__class__.__module__]
@@ -351,9 +422,10 @@ def test_challenge_missing_statuses_fails_closed_and_starts_seven_day_clock(dire
     contract = direct_deploy(Path("contract/contracts/beacon.py"))
     open_release(contract, direct_vm, terms)
     item = json.loads(contract.get_release(1))
-    item.update({"state": "REVIEW", "inventory_count": 1, "certificate": {"outcome": "ACCEPTED"}, "challenge_until": 1893456000})
+    item.update({"state": "REVIEW", "inventory_count": 1, "component_count": 1, "certificate": {"outcome": "ACCEPTED"}, "challenge_until": 1893456000})
     contract.releases[1] = json.dumps(item)
     contract.entries["1:entry:0"] = json.dumps({"path": "src/a.py", "status": "VERIFIED", "text": "VALUE=1"})
+    contract.components["1:component:0"] = json.dumps({"entries": [0], "paths": ["src/a.py"], "status": "ACCEPT"})
     direct_vm.sender = terms["sponsor"]
     contract.challenge_certificate(1, 0, "recheck incomplete semantic output")
     module = sys.modules[contract.__class__.__module__]
@@ -368,6 +440,28 @@ def test_challenge_missing_statuses_fails_closed_and_starts_seven_day_clock(dire
     assert stored["indeterminate_until"] - stored["challenge_until"] == 7 * 24 * 60 * 60
     with pytest.raises(Exception):
         contract.refund_indeterminate(1)
+
+
+@pytest.mark.parametrize("status", ["NOT_MET", "UNCERTAIN"])
+def test_challenge_accept_with_non_met_status_cannot_preserve_acceptance(direct_deploy, direct_vm, terms, status):
+    contract = direct_deploy(Path("contract/contracts/beacon.py"))
+    open_release(contract, direct_vm, terms)
+    item = json.loads(contract.get_release(1))
+    item.update({"state": "REVIEW", "inventory_count": 1, "component_count": 1, "certificate": {"outcome": "ACCEPTED"}, "challenge_until": 1893456000})
+    contract.releases[1] = json.dumps(item)
+    contract.entries["1:entry:0"] = json.dumps({"path": "src/a.py", "status": "VERIFIED", "text": "VALUE=1"})
+    contract.components["1:component:0"] = json.dumps({"entries": [0], "paths": ["src/a.py"], "status": "ACCEPT"})
+    direct_vm.sender = terms["sponsor"]
+    contract.challenge_certificate(1, 0, "recheck contradictory semantic result")
+    module = sys.modules[contract.__class__.__module__]
+    original = module.result_from_model
+    module.result_from_model = lambda _prompt: {"result": "ACCEPT", "statuses": [status], "rationale": "contradictory verdict"}
+    try:
+        certificate = json.loads(contract.review_challenge(1))
+    finally:
+        module.result_from_model = original
+    assert certificate["outcome"] == "INDETERMINATE"
+    assert certificate["challenge"]["statuses"] == [status]
 
 
 def test_unresolved_dependency_and_inconsistent_assessment_cannot_accept(direct_deploy, direct_vm, terms):

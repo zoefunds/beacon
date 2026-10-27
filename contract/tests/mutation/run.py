@@ -67,7 +67,39 @@ def test_removing_directory_metadata_exclusion_is_rejected():
 
 
 def test_removing_complete_obligation_status_coverage_is_rejected():
-    assert mutation_is_rejected('len(verdict.get("statuses", [])) != len(item["obligations"])', 'False', replace_all=True)
+    assert mutation_is_rejected('len(statuses) != expected', 'False')
+
+
+def test_allowing_model_accept_with_non_met_status_is_rejected():
+    assert mutation_is_rejected('result == "ACCEPT" and statuses and any(status != "MET" for status in statuses)', 'False')
+
+
+def test_allowing_obligation_accept_with_non_met_status_is_rejected():
+    assert mutation_is_rejected('result == "ACCEPT" and any(status != "MET" for status in statuses)', 'False')
+
+
+def test_removing_certificate_all_met_gate_is_rejected():
+    assert mutation_is_rejected('and all_obligations_met and runtime_evidence_passed and all(x == "ACCEPT" for x in edge_results)', 'and runtime_evidence_passed and all(x == "ACCEPT" for x in edge_results)')
+
+
+def test_removing_challenge_all_met_gate_is_rejected():
+    assert mutation_is_rejected('and result == "ACCEPT" and all_obligations_met', 'and result == "ACCEPT"')
+
+
+def test_removing_challenge_component_context_is_rejected():
+    assert mutation_is_rejected('"component_sources":', '"selected_sources":')
+
+
+def test_removing_baseline_change_commitment_is_rejected():
+    assert mutation_is_rejected('"change_root":', '"disabled_change_root":', replace_all=True)
+
+
+def test_removing_runtime_check_commitment_is_rejected():
+    assert mutation_is_rejected('"runtime_root":', '"disabled_runtime_root":', replace_all=True)
+
+
+def test_removing_runtime_evidence_acceptance_gate_is_rejected():
+    assert mutation_is_rejected('and runtime_evidence_passed and all(x == "ACCEPT" for x in edge_results)', 'and all(x == "ACCEPT" for x in edge_results)')
 
 
 def test_removing_confirmed_challenge_acceptance_is_rejected():
@@ -95,7 +127,7 @@ def test_removing_validator_status_consensus_is_rejected():
 
 
 def test_removing_bounded_status_vocabulary_is_rejected():
-    assert mutation_is_rejected('status not in {"MET", "NOT_MET", "UNCERTAIN"}', 'False')
+    assert mutation_is_rejected('status not in {"MET", "NOT_MET", "UNCERTAIN"}', 'False', replace_all=True)
 
 
 def test_removing_challenge_uncertainty_clock_is_rejected():
@@ -116,6 +148,14 @@ if __name__ == "__main__":
         test_removing_runtime_address_normalization_is_rejected,
         test_removing_directory_metadata_exclusion_is_rejected,
         test_removing_complete_obligation_status_coverage_is_rejected,
+        test_allowing_model_accept_with_non_met_status_is_rejected,
+        test_allowing_obligation_accept_with_non_met_status_is_rejected,
+        test_removing_certificate_all_met_gate_is_rejected,
+        test_removing_challenge_all_met_gate_is_rejected,
+        test_removing_challenge_component_context_is_rejected,
+        test_removing_baseline_change_commitment_is_rejected,
+        test_removing_runtime_check_commitment_is_rejected,
+        test_removing_runtime_evidence_acceptance_gate_is_rejected,
         test_removing_confirmed_challenge_acceptance_is_rejected,
         test_removing_safe_value_deposit_boundary_is_rejected,
         test_removing_unallocated_funding_recovery_is_rejected,
