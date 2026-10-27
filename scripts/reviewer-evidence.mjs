@@ -22,9 +22,9 @@ console.log(JSON.stringify({
   },
   frontend: {
     productionUrl: "https://bea-con.vercel.app/",
-    immutableUrl: "https://bea-r08xz8jdj-adebiyi2002gmailcoms-projects.vercel.app",
-    deploymentId: "dpl_ChXKYSuD9LjKjX2RgZ9Tb6XYUHUh",
-    attestation: "https://bea-con.vercel.app/attestations?release=1",
+    immutableUrl: "https://bea-oq7tlnoeg-adebiyi2002gmailcoms-projects.vercel.app",
+    deploymentId: "dpl_63hpRvuraJ8oPWmwCvHsk7g1ipsL",
+    attestation: "https://bea-con.vercel.app/attestations",
     vault: "https://bea-con.vercel.app/vault",
   },
   historicalRelease1OnSupersededContract: {

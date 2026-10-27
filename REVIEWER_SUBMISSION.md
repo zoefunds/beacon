@@ -5,36 +5,37 @@
 ## Canonical reference
 
 - Repository: `https://github.com/zoefunds/beacon`
-- Review tag: `reviewer-evidence-2026-10-27-v11`
-- Reviewed commit: `e0e4918ff10c8baa2d1ea3d2765920a81caa1896`
+- Review tag: `reviewer-evidence-2026-10-27-v12`
+- Reviewed commit: `7d2c0b6b7d1a2c8ec20458e331c46c633d3ae77d`
 - Frontend: `https://bea-con.vercel.app/`
-- Immutable frontend: `https://bea-r08xz8jdj-adebiyi2002gmailcoms-projects.vercel.app`
-- Studionet contract: `0xeE34e10CF770aaDbfA9C369Eec946eb5c3D164E9`
-- Deployment transaction: [`0x4038…b4c8`](https://explorer-studio.genlayer.com/tx/0x4038cc6af9f83d30a7ac3daab2202a9da564bcb147046fb4405c5135ec41b4c8)
-- Source: 36,764 bytes, SHA-256 `4ae0e6a0fe1f55fc4ec72c0caf5901267a2f7b557ffec250e88f0d4c3bed8d46`
+- Immutable frontend: `https://bea-oq7tlnoeg-adebiyi2002gmailcoms-projects.vercel.app`
+- Vercel deployment: `dpl_63hpRvuraJ8oPWmwCvHsk7g1ipsL`
+- Studionet contract: `0x3244f824cD071D564071AD5ad8207953a0A04Efb`
+- Deployment transaction: [`0xf586…7008`](https://explorer-studio.genlayer.com/tx/0xf5863c8d931f250430261570129a51ebb4f11c8251502b4c862ef4bc8497008c)
+- Source: 43,247 bytes, SHA-256 `406376022834a27cc6b53a13ea7168de0d2709bd94288eff3d9a01c159b85d35`
 
-The steward deployed-source fetcher independently retrieved and compiled the Studionet payload; its digest exactly matched `contract/contracts/beacon.py`. Its bundled SDK validation was unavailable because that tool lacked the pinned runner archive, while the repository's direct `genvm-lint` run passed all 3 lint checks.
+`npm run evidence:live` retrieves the active Studionet source through `gen_getContractCode` and compares it byte-for-byte to `contract/contracts/beacon.py`. The new deployment finalized under majority agreement, and the repository's direct `genvm-lint` run passed all 3 lint checks.
 
 ## Public implementation
 
-- [Intelligent Contract](https://github.com/zoefunds/beacon/blob/reviewer-evidence-2026-10-27-v11/contract/contracts/beacon.py)
-- [Direct lifecycle and adversarial tests](https://github.com/zoefunds/beacon/blob/reviewer-evidence-2026-10-27-v11/contract/tests/direct/test_lifecycle.py)
-- [Protocol guards](https://github.com/zoefunds/beacon/blob/reviewer-evidence-2026-10-27-v11/contract/tests/test_source_guards.py)
-- [Mutation controls](https://github.com/zoefunds/beacon/blob/reviewer-evidence-2026-10-27-v11/contract/tests/mutation/run.py)
-- [Finality-aware frontend client](https://github.com/zoefunds/beacon/blob/reviewer-evidence-2026-10-27-v11/frontend/lib/beacon-client.ts)
-- [Studionet verifier](https://github.com/zoefunds/beacon/blob/reviewer-evidence-2026-10-27-v11/scripts/verify-studionet.mjs)
+- [Intelligent Contract](https://github.com/zoefunds/beacon/blob/reviewer-evidence-2026-10-27-v12/contract/contracts/beacon.py)
+- [Focused invariant and lifecycle tests](https://github.com/zoefunds/beacon/blob/reviewer-evidence-2026-10-27-v12/contract/tests/direct/test_lifecycle.py)
+- [Protocol guards](https://github.com/zoefunds/beacon/blob/reviewer-evidence-2026-10-27-v12/contract/tests/test_source_guards.py)
+- [Mutation controls](https://github.com/zoefunds/beacon/blob/reviewer-evidence-2026-10-27-v12/contract/tests/mutation/run.py)
+- [Finality-aware frontend client](https://github.com/zoefunds/beacon/blob/reviewer-evidence-2026-10-27-v12/frontend/lib/beacon-client.ts)
+- [Studionet source verifier](https://github.com/zoefunds/beacon/blob/reviewer-evidence-2026-10-27-v12/scripts/verify-studionet.mjs)
 
 ## Core guarantees
 
-The seal binds the pre-deadline commit, commit tree, baseline tree, and observed branch head. Inventory comes from the sealed recursive Git tree, not caller- or model-emitted identifiers. Git blob bytes are recomputed, local dependencies are deterministically extracted and resolved, and every component and cross-component edge must be assessed. Unsupported content, missing or mismatched blobs, tree truncation, unresolved or ambiguous dependencies, bounds exhaustion, blockers, incomplete coverage, malformed statuses, and validator disagreement cannot create an accepted certificate.
+The seal binds the pre-deadline commit, commit tree, baseline tree, observed branch head, scoped baseline-to-release change manifest, and public commit-check records. Inventory comes from the sealed recursive Git tree, not caller- or model-emitted identifiers. Git blob bytes are recomputed, local dependencies are deterministically extracted and resolved, and every component and cross-component edge must be assessed. Unsupported content, missing or mismatched blobs, tree truncation, unresolved or ambiguous dependencies, bounds exhaustion, blockers, incomplete coverage, malformed statuses, validator disagreement, and absent/pending/failed runtime checks cannot create an accepted certificate.
 
-Semantic evaluation calls `gl.nondet.exec_prompt` inside `gl.vm.run_nondet`. Validators compare the exact result and complete ordered `MET | NOT_MET | UNCERTAIN` vector. Deterministic code owns evidence identity, coverage, roots, state transitions, and money.
+Semantic evaluation calls `gl.nondet.exec_prompt` inside `gl.vm.run_nondet`. Validators compare the exact result and complete ordered `MET | NOT_MET | UNCERTAIN` vector. `ACCEPT` is valid only when every obligation status is `MET`; component assessment, certificate aggregation, and challenge review each enforce this independently. Challenge review reconstructs the complete challenged component and incident dependency edges, then includes sealed baseline and runtime evidence. Deterministic code owns evidence identity, coverage, roots, state transitions, and money.
 
 Funding is deliberately three-step: value-free `open_release`, non-reverting payable `deposit_funding`, then value-free validated `sponsor`. This prevents a failed validation from stranding an attached value outside accounting. Unallocated funding is withdrawable. Certificate settlement credits only fixed beneficiaries; withdrawal zeroes credit before triggering the EOA transfer.
 
-## Final release 1 trace
+## Historical lifecycle trace
 
-Release 1 uses `octocat/Spoon-Knife`, commit `d0dd1f61b33d64e29d8bc1372a94ef6a2fee76a9`, tree `d7cee29eaada459ba458a63ad983a89915c6a10a`, and scope `index.html`.
+Release 1 is a historical complete-lifecycle trace on the superseded contract. The active hardened contract above is source-verified separately and requires successful public runtime checks for any future payout.
 
 | Event | Studionet transaction |
 | --- | --- |
@@ -57,14 +58,14 @@ Release 1 uses `octocat/Spoon-Knife`, commit `d0dd1f61b33d64e29d8bc1372a94ef6a2f
 | Triggered 1 GEN EOA transfer | [`0xab85…26cc`](https://explorer-studio.genlayer.com/tx/0xab85ab79dc746e7ac2fe90dd79170bf37ca0d908bf50ba33f661077b251926cc) |
 | Second withdrawal emits no transfer | [`0xa2c4…81fa`](https://explorer-studio.genlayer.com/tx/0xa2c4b180c2a2231276b982314e93425e97eb0f16d9b36ab718e3e28a538281fa) |
 
-Final state and certificate outcome are `ACCEPTED`, coverage is `[1,1,1,1,0,0]`, blockers are empty, and six 64-hex commitment roots are stored. Contract settlement and funding balances are both zero after withdrawal. The production view is [release 1](https://bea-con.vercel.app/attestations?release=1).
+The historical trace reached `ACCEPTED` with coverage `[1,1,1,1,0,0]`; it documents escrow mechanics only and is not evidence for the new runtime-evidence rule. The active deployment is verified by `npm run evidence:live`.
 
 ## Reproduce
 
 ```sh
 git clone https://github.com/zoefunds/beacon.git
 cd beacon
-git checkout reviewer-evidence-2026-10-27-v11
+git checkout reviewer-evidence-2026-10-27-v12
 npm ci
 npm --prefix frontend ci
 python3 -m venv .venv
@@ -78,4 +79,4 @@ npm run evidence:frontend
 npm run evidence:public
 ```
 
-Expected: 38 protocol guards, 41 contract tests, 20 mutation controls, successful production build, 20 frontend tests, 3 GenVM lint checks, 0 production vulnerabilities, matching deployed source, and passing live/public/frontend verifiers.
+Expected: 48 protocol guards, 54 contract tests, 28 mutation controls, successful production build, 20 frontend tests, 3 GenVM lint checks, 0 production vulnerabilities, matching deployed source, and passing live/public/frontend verifiers.

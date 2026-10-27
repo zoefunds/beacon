@@ -1,12 +1,12 @@
 # Beacon protocol
 
-> Protocol description verified 27 October 2026 against `reviewer-evidence-2026-10-27-v11`.
+> Protocol description verified 27 October 2026 against `reviewer-evidence-2026-10-27-v12`.
 
 Beacon is an escrow agreement between sponsors and an implementer. It evaluates a named, pre-sealed repository release against explicit obligations.
 
 ## Release seal
 
-Before `seal_by`, the implementer submits a commit SHA. Validators fetch the named Git ref, verify that the commit is reachable from it, prove that the declared baseline is an ancestor of the commit, fetch the commit tree, and store the exact commit/tree pair. Replacement seals are allowed only before `seal_by`; there is no operation that samples a branch after the deadline. Empty or incomplete seals are rejected. If no valid seal exists, the agreement expires into sponsor refunds.
+Before `seal_by`, the implementer submits a commit SHA. Validators fetch the named Git ref, verify that the commit is reachable from it, prove that the declared baseline is an ancestor of the commit, fetch the commit tree, and store the exact commit/tree pair. The seal also commits a bounded scoped baseline-to-release change manifest and bounded public commit-check records. Replacement seals are allowed only before `seal_by`; there is no operation that samples a branch after the deadline. Empty or incomplete seals are rejected. If no valid seal exists, the agreement expires into sponsor refunds.
 
 ## Inventory before judgment
 
@@ -15,13 +15,13 @@ The agreement includes one or more normalized repository paths. Bounded traversa
 ## Two evidence lanes
 
 1. **Mechanical lane.** Blob bytes are verified against Git object hashes. Parsers extract local Python and JavaScript/TypeScript imports and exports. Every resolvable edge is mandatory coverage.
-2. **Semantic lane.** Validators classify bounded component packets against each obligation. Validators compare both the settlement result and the complete ordered obligation-status vector; explanatory text is retained as evidence but cannot make consensus artificially brittle. Their observations are never authoritative for dependency completeness.
+2. **Semantic lane.** Validators classify bounded component packets against each obligation. Validators compare both the settlement result and the complete ordered obligation-status vector; explanatory text is retained as evidence but cannot make consensus artificially brittle. An obligation-bearing `ACCEPT` is valid only when every ordered status is `MET`; contradictory `ACCEPT` values normalize to `UNCERTAIN`. Component packets include the sealed scoped change manifest and public commit-check evidence. Their observations are never authoritative for dependency completeness.
 
 Components are constructed from deterministic graph connectivity rather than model-issued labels. Python relative and absolute-local imports plus JavaScript/TypeScript static, side-effect, dynamic, and CommonJS imports are covered. Unresolved local references and parser limits become blockers. Cross-component edges create mandatory compatibility checks.
 
 ## Finality
 
-Positive release requires exact coverage equality: all inventory entries materialized, all components assessed, all mandatory edges reviewed, and no blockers. The certificate has separate roots for the full agreement, seal, blob-bound inventory, reviewed graph edges, assessments, and obligations. A challenge names a committed inventory entry and causes reassessment. Funds use pull payments.
+Positive release requires exact coverage equality: all inventory entries materialized, all components assessed, all mandatory edges reviewed, no blockers, every component result `ACCEPT`, every obligation status `MET`, and at least one sealed public check with a successful completed result. The certificate has separate roots for the full agreement, seal, blob-bound inventory, reviewed graph edges, assessments, and obligations. A challenge names a committed inventory entry and reconstructs its complete deterministic component plus incident dependency edges before reassessment. Funds use pull payments.
 
 For a provisional acceptance, sponsors may challenge a committed entry during the review window. For a provisional rejection, the implementer has the reciprocal right. Reassessment uses the same sealed source evidence. A non-decisive assessment produces `INDETERMINATE`; after a seven-day review period, anyone may move its escrow into sponsor pull-payment balances.
 
@@ -42,6 +42,7 @@ The acceptance/rejection challenge window is 20 minutes. `INDETERMINATE` certifi
 | Dependency edges | 256 |
 | Connected components | 96 |
 | Source characters per semantic component | 30,000 |
+| Public runtime checks in a seal | 32 |
 
 The minimum initial escrow is 1 GEN. A release deadline must be at least five minutes in the future when the agreement is opened. Any exhausted parser, graph, source, or inventory bound prevents a positive certificate instead of silently dropping evidence.
 
