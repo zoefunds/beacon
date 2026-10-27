@@ -2,7 +2,7 @@
 
 > Results last reproduced 27 October 2026.
 
-Reference: `reviewer-evidence-2026-10-27-v10` (`05231dd9a989c8b7c1fa52fd9ec7203f9a0cb3e8`).
+Reference: `reviewer-evidence-2026-10-27-v11` (`e0e4918ff10c8baa2d1ea3d2765920a81caa1896`).
 
 | Command | Result |
 | --- | --- |
@@ -10,7 +10,7 @@ Reference: `reviewer-evidence-2026-10-27-v10` (`05231dd9a989c8b7c1fa52fd9ec7203f
 | `npm run contract:test` | 41 tests passed |
 | `npm run contract:mutation` | 20 critical mutations rejected |
 | `npm --prefix frontend run build` | Production build passed; four routes generated |
-| `npm --prefix frontend run test` | 19 tests passed across 6 files |
+| `npm --prefix frontend run test` | 20 tests passed across 6 files |
 | `genvm-lint contract/contracts/beacon.py` | 3 checks passed |
 | `npm --prefix frontend audit --omit=dev` | 0 vulnerabilities |
 | Steward deployed-source fetch | Source matched SHA-256 `4ae0e6a0fe1f55fc4ec72c0caf5901267a2f7b557ffec250e88f0d4c3bed8d46`; compile passed; bundled SDK validation reported its runner archive unavailable |

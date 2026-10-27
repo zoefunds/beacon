@@ -1,6 +1,6 @@
 # Beacon protocol
 
-> Protocol description verified 27 October 2026 against `reviewer-evidence-2026-10-27-v10`.
+> Protocol description verified 27 October 2026 against `reviewer-evidence-2026-10-27-v11`.
 
 Beacon is an escrow agreement between sponsors and an implementer. It evaluates a named, pre-sealed repository release against explicit obligations.
 

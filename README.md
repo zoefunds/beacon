@@ -1,6 +1,6 @@
 # Beacon
 
-> Documentation verified 27 October 2026 against implementation tag `reviewer-evidence-2026-10-27-v10`, the active Studionet deployment, and the production frontend.
+> Documentation verified 27 October 2026 against implementation tag `reviewer-evidence-2026-10-27-v11`, the active Studionet deployment, and the production frontend.
 
 Beacon is a GenLayer release-attestation and conditional GEN escrow protocol. A release is sealed to an immutable Git commit before its deadline; after the deadline, the contract reconstructs the complete scoped inventory, verifies Git blob bytes, builds a bounded dependency graph, obtains validator-consensus semantic judgments, and issues a root-committed settlement certificate.
 
@@ -31,9 +31,9 @@ Unsealed releases can expire to sponsor credit. A certificate can be challenged 
 - Contract: `0xeE34e10CF770aaDbfA9C369Eec946eb5c3D164E9`
 - Deployment transaction: `0x4038cc6af9f83d30a7ac3daab2202a9da564bcb147046fb4405c5135ec41b4c8`
 - Deployed source: 36,764 bytes, SHA-256 `4ae0e6a0fe1f55fc4ec72c0caf5901267a2f7b557ffec250e88f0d4c3bed8d46`
-- Review tag: `reviewer-evidence-2026-10-27-v10`
-- Reviewed commit: `05231dd9a989c8b7c1fa52fd9ec7203f9a0cb3e8`
-- Vercel deployment: `dpl_Ca4Zyxh7qJsq8BuE9Fz9YvifW1uB`
+- Review tag: `reviewer-evidence-2026-10-27-v11`
+- Reviewed commit: `e0e4918ff10c8baa2d1ea3d2765920a81caa1896`
+- Vercel deployment: `dpl_ChXKYSuD9LjKjX2RgZ9Tb6XYUHUh`
 
 The frontend talks directly to GenLayer and contains no custodial backend. The review tag and reviewed commit identify the deployed implementation; later documentation-only commits do not change its source digest.
 
@@ -53,6 +53,6 @@ npm run evidence:frontend
 npm run evidence:public
 ```
 
-Current results: 38 protocol guards, 41 contract tests, 20 mutation controls, a successful production build, 19 frontend tests across 6 files, 3 GenVM lint checks, and 0 known production dependency vulnerabilities. See [`docs/VERIFICATION_RESULTS.md`](docs/VERIFICATION_RESULTS.md) and [`docs/REVIEWER_EVIDENCE.md`](docs/REVIEWER_EVIDENCE.md).
+Current results: 38 protocol guards, 41 contract tests, 20 mutation controls, a successful production build, 20 frontend tests across 6 files, 3 GenVM lint checks, and 0 known production dependency vulnerabilities. See [`docs/VERIFICATION_RESULTS.md`](docs/VERIFICATION_RESULTS.md) and [`docs/REVIEWER_EVIDENCE.md`](docs/REVIEWER_EVIDENCE.md).
 
 GitHub Actions receives branch and tag pushes, but the repository owner's billing lock currently prevents jobs from starting. This is reported as an external CI availability limitation, not as a passing run.

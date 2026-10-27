@@ -5,10 +5,10 @@
 ## Canonical reference
 
 - Repository: `https://github.com/zoefunds/beacon`
-- Review tag: `reviewer-evidence-2026-10-27-v10`
-- Reviewed commit: `05231dd9a989c8b7c1fa52fd9ec7203f9a0cb3e8`
+- Review tag: `reviewer-evidence-2026-10-27-v11`
+- Reviewed commit: `e0e4918ff10c8baa2d1ea3d2765920a81caa1896`
 - Frontend: `https://bea-con.vercel.app/`
-- Immutable frontend: `https://bea-kn5v54ets-adebiyi2002gmailcoms-projects.vercel.app`
+- Immutable frontend: `https://bea-r08xz8jdj-adebiyi2002gmailcoms-projects.vercel.app`
 - Studionet contract: `0xeE34e10CF770aaDbfA9C369Eec946eb5c3D164E9`
 - Deployment transaction: [`0x4038…b4c8`](https://explorer-studio.genlayer.com/tx/0x4038cc6af9f83d30a7ac3daab2202a9da564bcb147046fb4405c5135ec41b4c8)
 - Source: 36,764 bytes, SHA-256 `4ae0e6a0fe1f55fc4ec72c0caf5901267a2f7b557ffec250e88f0d4c3bed8d46`
@@ -17,12 +17,12 @@ The steward deployed-source fetcher independently retrieved and compiled the Stu
 
 ## Public implementation
 
-- [Intelligent Contract](https://github.com/zoefunds/beacon/blob/reviewer-evidence-2026-10-27-v10/contract/contracts/beacon.py)
-- [Direct lifecycle and adversarial tests](https://github.com/zoefunds/beacon/blob/reviewer-evidence-2026-10-27-v10/contract/tests/direct/test_lifecycle.py)
-- [Protocol guards](https://github.com/zoefunds/beacon/blob/reviewer-evidence-2026-10-27-v10/contract/tests/test_source_guards.py)
-- [Mutation controls](https://github.com/zoefunds/beacon/blob/reviewer-evidence-2026-10-27-v10/contract/tests/mutation/run.py)
-- [Finality-aware frontend client](https://github.com/zoefunds/beacon/blob/reviewer-evidence-2026-10-27-v10/frontend/lib/beacon-client.ts)
-- [Studionet verifier](https://github.com/zoefunds/beacon/blob/reviewer-evidence-2026-10-27-v10/scripts/verify-studionet.mjs)
+- [Intelligent Contract](https://github.com/zoefunds/beacon/blob/reviewer-evidence-2026-10-27-v11/contract/contracts/beacon.py)
+- [Direct lifecycle and adversarial tests](https://github.com/zoefunds/beacon/blob/reviewer-evidence-2026-10-27-v11/contract/tests/direct/test_lifecycle.py)
+- [Protocol guards](https://github.com/zoefunds/beacon/blob/reviewer-evidence-2026-10-27-v11/contract/tests/test_source_guards.py)
+- [Mutation controls](https://github.com/zoefunds/beacon/blob/reviewer-evidence-2026-10-27-v11/contract/tests/mutation/run.py)
+- [Finality-aware frontend client](https://github.com/zoefunds/beacon/blob/reviewer-evidence-2026-10-27-v11/frontend/lib/beacon-client.ts)
+- [Studionet verifier](https://github.com/zoefunds/beacon/blob/reviewer-evidence-2026-10-27-v11/scripts/verify-studionet.mjs)
 
 ## Core guarantees
 
@@ -64,7 +64,7 @@ Final state and certificate outcome are `ACCEPTED`, coverage is `[1,1,1,1,0,0]`,
 ```sh
 git clone https://github.com/zoefunds/beacon.git
 cd beacon
-git checkout reviewer-evidence-2026-10-27-v10
+git checkout reviewer-evidence-2026-10-27-v11
 npm ci
 npm --prefix frontend ci
 python3 -m venv .venv
@@ -78,4 +78,4 @@ npm run evidence:frontend
 npm run evidence:public
 ```
 
-Expected: 38 protocol guards, 41 contract tests, 20 mutation controls, successful production build, 19 frontend tests, 3 GenVM lint checks, 0 production vulnerabilities, matching deployed source, and passing live/public/frontend verifiers.
+Expected: 38 protocol guards, 41 contract tests, 20 mutation controls, successful production build, 20 frontend tests, 3 GenVM lint checks, 0 production vulnerabilities, matching deployed source, and passing live/public/frontend verifiers.
