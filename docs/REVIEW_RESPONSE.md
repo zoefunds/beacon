@@ -1,15 +1,15 @@
 # Independent verification guide
 
-> Reproduction instructions verified 27 October 2026.
+> Reproduction instructions verified 28 October 2026.
 
-Beacon's active deployed implementation and evidence are reproducible from tag `reviewer-evidence-2026-10-27-v12`, commit `7d2c0b6b7d1a2c8ec20458e331c46c633d3ae77d`. Later documentation-only commits do not alter that deployed source.
+Beacon's active deployed implementation and evidence are reproducible from tag `reviewer-evidence-2026-10-27-v13`.
 
 ## Verify locally
 
 ```sh
 git clone https://github.com/zoefunds/beacon.git
 cd beacon
-git checkout reviewer-evidence-2026-10-27-v12
+git checkout reviewer-evidence-2026-10-27-v13
 npm ci
 npm --prefix frontend ci
 python3 -m venv .venv
@@ -25,13 +25,13 @@ npm run evidence:public
 
 ## What the verifier establishes
 
-- The deployed Studionet source at `0x3244f824cD071D564071AD5ad8207953a0A04Efb` matches the reviewed 43,247-byte source digest: `406376022834a27cc6b53a13ea7168de0d2709bd94288eff3d9a01c159b85d35`.
+- The deployed Studionet source at `0x37c8de10d3cC7ba4353608441A57a917e9628618` matches the reviewed 45,544-byte source digest: `d0f8c3b612836503f3558421a9b84a94e76afd6219dbeeea696927c45b0718e2`.
 - Agreement creation carries no value; the only payable method records funding without validation; allocation is a later value-free call.
-- The seal commits the pre-deadline commit, tree, baseline tree, observed ref head, bounded baseline-to-release change manifest, and bounded public check records.
+- The seal commits the pre-deadline commit, tree, baseline tree, observed ref head, bounded baseline-to-release change manifest, complete bounded check-run response, and sponsor-approved check-name/app policy.
 - The inventory is reconstructed from that seal, every scoped blob is byte-verified, and graph/assessment coverage is complete before a certificate can be considered.
 - Semantic judgment is produced by GenLayer nondeterministic execution; validators must agree on both the result and ordered status vector, and `ACCEPT` is valid only when every obligation is `MET`.
-- The certificate contains six valid commitment roots, complete coverage, no blockers, and successful sealed runtime evidence. Missing, pending, or failed checks yield non-settleable `INDETERMINATE`.
-- Direct tests cover unauthorized and duplicate financial actions, expiry/refund paths, malformed and contradictory status vectors, and the seven-day indeterminate refund path. The older on-chain lifecycle trace is marked historical because it predates the active runtime-evidence requirement.
+- The certificate contains six valid commitment roots, complete coverage, no blockers, and successful sealed runtime evidence. Pagination mismatch, a missing required check, a check for another commit/app, or any pending/failed returned check prevents sealing.
+- Direct tests cover unauthorized and duplicate financial actions, expiry/refund paths, malformed and contradictory status vectors, exact runtime-check completeness/policy, and the seven-day indeterminate refund path. Active on-chain traces cover both fail-closed challenge outcomes and successful settlement.
 - Production routes return HTTP 200 and embed the same contract address and lifecycle operations.
 
 ## Fail-closed paths

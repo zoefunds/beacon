@@ -158,6 +158,7 @@ export function ReleaseMonitor({ onRelease }: Props) {
         <div><dt>Implementer</dt><dd><code>{String(release.implementer)}</code></dd></div>
         <div><dt>Escrow</dt><dd>{formatGen(release.escrow)} GEN</dd></div>
         <div><dt>Scope</dt><dd>{textList(release.scope).join(", ")}</dd></div>
+        <div><dt>Required checks</dt><dd>{Array.isArray(release.required_checks) ? release.required_checks.map(item => { const check = objectValue(item); return check ? `${String(check.name)}@${String(check.app_slug)}` : ""; }).filter(Boolean).join(" · ") : ""}</dd></div>
         <div><dt>Coverage</dt><dd>{count(release, "inventory_count")} inventory · {count(release, "materialized_count")} materialized · {count(release, "component_count")} components · {count(release, "assessed_count")} assessed · {count(release, "edge_count")} edges · {count(release, "reviewed_edges")} reviewed</dd></div>
         <div><dt>Blockers</dt><dd>{textList(release.blockers).join(" · ") || "None"}</dd></div>
         <div><dt>Obligations</dt><dd>{textList(release.obligations).join(" · ")}</dd></div>

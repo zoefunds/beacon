@@ -1,12 +1,12 @@
 # Beacon protocol
 
-> Protocol description verified 27 October 2026 against `reviewer-evidence-2026-10-27-v12`.
+> Protocol description verified 28 October 2026 against `reviewer-evidence-2026-10-27-v13`.
 
 Beacon is an escrow agreement between sponsors and an implementer. It evaluates a named, pre-sealed repository release against explicit obligations.
 
 ## Release seal
 
-Before `seal_by`, the implementer submits a commit SHA. Validators fetch the named Git ref, verify that the commit is reachable from it, prove that the declared baseline is an ancestor of the commit, fetch the commit tree, and store the exact commit/tree pair. The seal also commits a bounded scoped baseline-to-release change manifest and bounded public commit-check records. Replacement seals are allowed only before `seal_by`; there is no operation that samples a branch after the deadline. Empty or incomplete seals are rejected. If no valid seal exists, the agreement expires into sponsor refunds.
+Before `seal_by`, the implementer submits a commit SHA. Validators fetch the named Git ref, require its head to equal that commit, prove that the declared baseline is an ancestor, fetch the commit tree, and store the exact commit/tree pair. The seal also commits a bounded scoped baseline-to-release change manifest, the complete bounded GitHub check-run response, and the agreement's required check name/app policy. The response uses `per_page=100`; its returned length must equal GitHub's `total_count`, every check must target the sealed commit and complete successfully, and every required identity must be present. Replacement seals are allowed only before `seal_by`; there is no operation that samples a branch after the deadline. Empty or incomplete seals are rejected. If no valid seal exists, the agreement expires into sponsor refunds.
 
 ## Inventory before judgment
 
@@ -21,7 +21,7 @@ Components are constructed from deterministic graph connectivity rather than mod
 
 ## Finality
 
-Positive release requires exact coverage equality: all inventory entries materialized, all components assessed, all mandatory edges reviewed, no blockers, every component result `ACCEPT`, every obligation status `MET`, and at least one sealed public check with a successful completed result. The certificate has separate roots for the full agreement, seal, blob-bound inventory, reviewed graph edges, assessments, and obligations. A challenge names a committed inventory entry and reconstructs its complete deterministic component plus incident dependency edges before reassessment. Funds use pull payments.
+Positive release requires exact coverage equality: all inventory entries materialized, all components assessed, all mandatory edges reviewed, no blockers, every component result `ACCEPT`, every obligation status `MET`, and a complete successful check response satisfying the committed required-check policy. The certificate has separate roots for the full agreement, seal, blob-bound inventory, reviewed graph edges, assessments, and obligations. A challenge names a committed inventory entry and reconstructs its complete deterministic component plus incident dependency edges before reassessment. Funds use pull payments.
 
 For a provisional acceptance, sponsors may challenge a committed entry during the review window. For a provisional rejection, the implementer has the reciprocal right. Reassessment uses the same sealed source evidence. A non-decisive assessment produces `INDETERMINATE`; after a seven-day review period, anyone may move its escrow into sponsor pull-payment balances.
 
@@ -43,6 +43,7 @@ The acceptance/rejection challenge window is 20 minutes. `INDETERMINATE` certifi
 | Connected components | 96 |
 | Source characters per semantic component | 30,000 |
 | Public runtime checks in a seal | 32 |
+| Required check identities in an agreement | 8 |
 
 The minimum initial escrow is 1 GEN. A release deadline must be at least five minutes in the future when the agreement is opened. Any exhausted parser, graph, source, or inventory bound prevents a positive certificate instead of silently dropping evidence.
 

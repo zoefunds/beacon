@@ -11,6 +11,7 @@ const STUDIONET_EXPLORER = STUDIONET.blockExplorers?.default.url ?? "https://exp
 export type ReleaseRecord = Record<string, unknown>;
 export type BeaconArgument = string | number | bigint;
 export type BeaconTransaction = { hash: `0x${string}`; receipt: unknown; releaseId?: bigint };
+export type RequiredCheck = { name: string; app_slug: string };
 type ReceiptStatus = NonNullable<Parameters<ReturnType<typeof createClient>["waitForTransactionReceipt"]>[0]["status"]>;
 const FINALIZED_STATUS = "FINALIZED" as ReceiptStatus;
 
@@ -159,13 +160,13 @@ export async function writeBeacon(input: {
 
 export async function openRelease(input: {
   account: `0x${string}`; provider: Eip1193Provider; repo: string; ref: string; baseline: string;
-  implementer: string; title: string; obligations: string[]; scope: string[]; sealBy: number; escrowWei: bigint;
+  implementer: string; title: string; obligations: string[]; scope: string[]; requiredChecks: RequiredCheck[]; sealBy: number; escrowWei: bigint;
 }) {
   const opened = await writeBeacon({
     account: input.account,
     provider: input.provider,
     functionName: "open_release",
-    args: [input.repo, input.ref, input.baseline, input.implementer, input.title, JSON.stringify(input.obligations), JSON.stringify(input.scope), BigInt(input.sealBy)],
+    args: [input.repo, input.ref, input.baseline, input.implementer, input.title, JSON.stringify(input.obligations), JSON.stringify(input.scope), JSON.stringify(input.requiredChecks), BigInt(input.sealBy)],
   });
   if (opened.releaseId === undefined) throw new Error("Agreement finalized without a release identifier; no GEN was deposited");
   const funded = await fundRelease({ account: input.account, provider: input.provider, releaseId: opened.releaseId, amount: input.escrowWei });

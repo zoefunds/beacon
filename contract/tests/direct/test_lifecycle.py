@@ -7,6 +7,8 @@ import pytest
 
 
 WEI = 10**18
+REQUIRED_CHECKS = [{"name": "tests", "app_slug": "github-actions"}]
+REQUIRED_CHECKS_JSON = json.dumps(REQUIRED_CHECKS)
 
 
 def set_time(vm, value):
@@ -24,7 +26,7 @@ def open_release(contract, vm, terms):
     vm.sender, vm.value = terms["sponsor"], 0
     receipt = contract.open_release(
         terms["repo"], terms["ref"], terms["baseline"], terms["implementer"], "Session safety release",
-        json.dumps(["The authorization boundary is preserved."]), json.dumps(["src"]), terms["seal_by"],
+        json.dumps(["The authorization boundary is preserved."]), json.dumps(["src"]), REQUIRED_CHECKS_JSON, terms["seal_by"],
     )
     vm.value = 2 * WEI
     contract.deposit_funding()
@@ -49,7 +51,7 @@ def test_open_release_normalizes_genlayer_address_arguments(direct_deploy, direc
     direct_vm.sender, direct_vm.value = terms["sponsor"], 0
     contract.open_release(
         terms["repo"], terms["ref"], terms["baseline"], module.Address(terms["implementer"]), "Address boundary",
-        '["Normalize the runtime address type."]', '["src"]', terms["seal_by"],
+        '["Normalize the runtime address type."]', '["src"]', REQUIRED_CHECKS_JSON, terms["seal_by"],
     )
     assert json.loads(contract.get_release(1))["implementer"] == terms["implementer"]
 
@@ -57,7 +59,7 @@ def test_open_release_normalizes_genlayer_address_arguments(direct_deploy, direc
 def test_seal_binds_scoped_baseline_changes_and_runtime_checks(direct_deploy, direct_vm, terms):
     contract = direct_deploy(Path("contract/contracts/beacon.py"))
     module = sys.modules[contract.__class__.__module__]
-    item = {"repo": terms["repo"], "ref": terms["ref"], "baseline": terms["baseline"], "scope": ["src"]}
+    item = {"repo": terms["repo"], "ref": terms["ref"], "baseline": terms["baseline"], "scope": ["src"], "required_checks": REQUIRED_CHECKS}
     commit = "b" * 40
     original = module.read_json
     def response(url):
@@ -66,7 +68,7 @@ def test_seal_binds_scoped_baseline_changes_and_runtime_checks(direct_deploy, di
         if url.endswith("/commits/" + terms["baseline"]): return {"sha": terms["baseline"], "commit": {"tree": {"sha": "d" * 40}}}
         if "/compare/" + commit + "..." + commit in url: return {"merge_base_commit": {"sha": commit}}
         if "/compare/" + terms["baseline"] + "..." + commit in url: return {"merge_base_commit": {"sha": terms["baseline"]}, "files": [{"filename": "src/a.py", "status": "modified", "sha": "e" * 40, "additions": 2, "deletions": 1, "changes": 3}]}
-        if url.endswith("/commits/" + commit + "/check-runs"): return {"head_sha": commit, "check_runs": [{"name": "tests", "status": "completed", "conclusion": "success", "html_url": "https://example.test/check"}]}
+        if "/commits/" + commit + "/check-runs?" in url: return {"head_sha": commit, "total_count": 1, "check_runs": [{"name": "tests", "head_sha": commit, "status": "completed", "conclusion": "success", "html_url": "https://example.test/check", "app": {"slug": "github-actions"}}]}
         raise AssertionError(url)
     module.read_json = response
     try:
@@ -75,8 +77,48 @@ def test_seal_binds_scoped_baseline_changes_and_runtime_checks(direct_deploy, di
         module.read_json = original
     assert module.valid_seal(seal)
     assert seal["runtime_state"] == "PASS"
+    assert seal["check_total"] == 1
+    assert seal["runtime_checks"][0]["app_slug"] == "github-actions"
     assert seal["changes"][0]["path"] == "src/a.py"
     assert len(seal["change_root"]) == 64 and len(seal["runtime_root"]) == 64
+
+
+@pytest.mark.parametrize("checks_data", [
+    {"total_count": 2, "check_runs": [{"name": "tests", "status": "completed", "conclusion": "success", "app": {"slug": "github-actions"}}]},
+    {"total_count": 1, "check_runs": [{"name": "other", "status": "completed", "conclusion": "success", "app": {"slug": "github-actions"}}]},
+    {"total_count": 1, "check_runs": [{"name": "tests", "status": "completed", "conclusion": "failure", "app": {"slug": "github-actions"}}]},
+    {"total_count": 1, "check_runs": [{"name": "tests", "status": "completed", "conclusion": "success", "app": {"slug": "untrusted-app"}}]},
+])
+def test_seal_rejects_incomplete_failed_or_unapproved_runtime_evidence(direct_deploy, terms, checks_data):
+    contract = direct_deploy(Path("contract/contracts/beacon.py"))
+    module = sys.modules[contract.__class__.__module__]
+    commit = "b" * 40
+    item = {"repo": terms["repo"], "ref": terms["ref"], "baseline": terms["baseline"], "scope": ["src"], "required_checks": REQUIRED_CHECKS}
+    checks_data = {**checks_data, "head_sha": commit}
+    for check in checks_data["check_runs"]: check["head_sha"] = commit
+    original = module.read_json
+    def response(url):
+        if "/branches/" in url: return {"commit": {"sha": commit}}
+        if url.endswith("/commits/" + commit): return {"sha": commit, "commit": {"tree": {"sha": "c" * 40}}}
+        if url.endswith("/commits/" + terms["baseline"]): return {"sha": terms["baseline"], "commit": {"tree": {"sha": "d" * 40}}}
+        if "/compare/" + commit + "..." + commit in url: return {"merge_base_commit": {"sha": commit}}
+        if "/compare/" + terms["baseline"] + "..." + commit in url: return {"merge_base_commit": {"sha": terms["baseline"]}, "files": [{"filename": "src/a.py", "status": "modified", "sha": "e" * 40, "additions": 1, "deletions": 0, "changes": 1}]}
+        if "/check-runs?filter=latest&per_page=100" in url: return checks_data
+        raise AssertionError(url)
+    module.read_json = response
+    try:
+        assert contract._seal_source(item, commit) is None
+    finally:
+        module.read_json = original
+
+
+def test_required_check_policy_rejects_duplicates(direct_deploy, direct_vm, terms):
+    contract = direct_deploy(Path("contract/contracts/beacon.py"))
+    set_time(direct_vm, "2026-10-01T10:00:00Z")
+    direct_vm.sender, direct_vm.value = terms["sponsor"], 0
+    duplicate = json.dumps(REQUIRED_CHECKS + REQUIRED_CHECKS)
+    with pytest.raises(Exception):
+        contract.open_release(terms["repo"], terms["ref"], terms["baseline"], terms["implementer"], "Duplicate checks", '["ok"]', '["src"]', duplicate, terms["seal_by"])
 
 
 def test_only_draft_state_accepts_new_sponsorship(direct_deploy, direct_vm, terms):
@@ -110,7 +152,7 @@ def test_unfunded_release_cannot_be_sealed(direct_deploy, direct_vm, terms):
     contract = direct_deploy(Path("contract/contracts/beacon.py"))
     set_time(direct_vm, "2026-10-01T10:00:00Z")
     direct_vm.sender, direct_vm.value = terms["sponsor"], 0
-    contract.open_release(terms["repo"], terms["ref"], terms["baseline"], terms["implementer"], "Unfunded", '["ok"]', '["src"]', terms["seal_by"])
+    contract.open_release(terms["repo"], terms["ref"], terms["baseline"], terms["implementer"], "Unfunded", '["ok"]', '["src"]', REQUIRED_CHECKS_JSON, terms["seal_by"])
     direct_vm.sender = terms["implementer"]
     with pytest.raises(Exception):
         contract.seal_release(1, "b" * 40)
@@ -121,7 +163,7 @@ def test_invalid_scope_fails_before_any_funding_is_attached(direct_deploy, direc
     set_time(direct_vm, "2026-10-01T10:00:00Z")
     direct_vm.sender, direct_vm.value = terms["sponsor"], 0
     with pytest.raises(Exception):
-        contract.open_release(terms["repo"], terms["ref"], terms["baseline"], terms["implementer"], "x", '["a"]', '["../escape"]', terms["seal_by"])
+        contract.open_release(terms["repo"], terms["ref"], terms["baseline"], terms["implementer"], "x", '["a"]', '["../escape"]', REQUIRED_CHECKS_JSON, terms["seal_by"])
 
 
 def test_first_credit_and_empty_withdraw_are_safe(direct_deploy, direct_vm, terms):
@@ -514,8 +556,8 @@ def test_release_text_inputs_are_bounded(direct_deploy, direct_vm, terms):
     set_time(direct_vm, "2026-10-01T10:00:00Z")
     direct_vm.sender, direct_vm.value = terms["sponsor"], WEI
     with pytest.raises(Exception):
-        contract.open_release(terms["repo"], "x" * 121, terms["baseline"], terms["implementer"], "valid title", '["ok"]', '["src"]', terms["seal_by"])
+        contract.open_release(terms["repo"], "x" * 121, terms["baseline"], terms["implementer"], "valid title", '["ok"]', '["src"]', REQUIRED_CHECKS_JSON, terms["seal_by"])
     with pytest.raises(Exception):
-        contract.open_release(terms["repo"], terms["ref"], terms["baseline"], terms["implementer"], "valid title", json.dumps(["x" * 1001]), '["src"]', terms["seal_by"])
+        contract.open_release(terms["repo"], terms["ref"], terms["baseline"], terms["implementer"], "valid title", json.dumps(["x" * 1001]), '["src"]', REQUIRED_CHECKS_JSON, terms["seal_by"])
     with pytest.raises(Exception):
-        contract.open_release(terms["repo"], terms["ref"], terms["baseline"], terms["implementer"], "valid title", '["ok"]', json.dumps(["x" * 241]), terms["seal_by"])
+        contract.open_release(terms["repo"], terms["ref"], terms["baseline"], terms["implementer"], "valid title", '["ok"]', json.dumps(["x" * 241]), REQUIRED_CHECKS_JSON, terms["seal_by"])

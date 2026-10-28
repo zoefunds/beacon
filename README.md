@@ -1,6 +1,6 @@
 # Beacon
 
-> Documentation verified 27 October 2026 against implementation tag `reviewer-evidence-2026-10-27-v12`, the active Studionet deployment, and the production frontend.
+> Documentation verified 28 October 2026 against implementation tag `reviewer-evidence-2026-10-27-v13`, the active Studionet deployment, and the production frontend.
 
 Beacon is a GenLayer release-attestation and conditional GEN escrow protocol. A release is sealed to an immutable Git commit before its deadline; after the deadline, the contract reconstructs the complete scoped inventory, verifies Git blob bytes, builds a bounded dependency graph, obtains validator-consensus semantic judgments, and issues a root-committed settlement certificate.
 
@@ -9,11 +9,11 @@ Reviewer entry point: [`REVIEWER_SUBMISSION.md`](REVIEWER_SUBMISSION.md).
 ## Security model
 
 - Agreement creation is value-free. GEN first enters a non-reverting funding balance, then a separate validated `sponsor` call allocates it. Unallocated deposits remain withdrawable.
-- `seal_release` verifies commit, tree, baseline ancestry, observed branch head, scoped baseline-to-release changes, and public commit-check evidence before the deadline. Post-close work uses only this stored seal.
+- `seal_release` verifies commit, tree, baseline ancestry, observed branch head, scoped baseline-to-release changes, the complete bounded GitHub check-run response, and the sponsor-approved check name/app policy before the deadline. Post-close work uses only this stored seal.
 - Inventory, blob verification, dependency extraction, graph construction, and coverage accounting are deterministic and bounded.
 - Missing blobs, truncated trees, unsupported content, unresolved or ambiguous dependencies, cap exhaustion, incomplete coverage, or malformed semantic output fail closed.
 - `gl.nondet.exec_prompt` runs inside `gl.vm.run_nondet`; validators compare both the result and complete ordered obligation-status vector. An obligation-bearing `ACCEPT` is valid only when every status is `MET`.
-- A successful settlement also requires sealed public runtime evidence. Missing, pending, or failed checks resolve to non-settleable `INDETERMINATE` rather than payout.
+- A successful settlement also requires sealed public runtime evidence. Pagination mismatch, omitted or unapproved checks, commit mismatch, and missing, pending, or failed checks prevent sealing and therefore cannot reach payout.
 - Certificates commit agreement, seal, inventory, assessment, edge, and obligation roots. `INDETERMINATE` cannot settle and becomes sponsor-refundable after seven days.
 - Settlement uses fixed beneficiaries, terminal states, pull payments, checks-effects-interactions, and replay-safe withdrawals.
 
@@ -29,15 +29,14 @@ Unsealed releases can expire to sponsor credit. A certificate can be challenged 
 - Attestation log: [open a release record](https://bea-con.vercel.app/attestations)
 - Vault: [bea-con.vercel.app/vault](https://bea-con.vercel.app/vault)
 - Network: GenLayer Studionet (`61999`)
-- Contract: `0x3244f824cD071D564071AD5ad8207953a0A04Efb`
-- Deployment transaction: `0xf5863c8d931f250430261570129a51ebb4f11c8251502b4c862ef4bc8497008c`
-- Deployed source: 43,247 bytes, SHA-256 `406376022834a27cc6b53a13ea7168de0d2709bd94288eff3d9a01c159b85d35`
-- Review tag: `reviewer-evidence-2026-10-27-v12`
-- Reviewed commit: `7d2c0b6b7d1a2c8ec20458e331c46c633d3ae77d`
-- Immutable frontend: `https://bea-oq7tlnoeg-adebiyi2002gmailcoms-projects.vercel.app`
-- Vercel deployment: `dpl_63hpRvuraJ8oPWmwCvHsk7g1ipsL`
+- Contract: `0x37c8de10d3cC7ba4353608441A57a917e9628618`
+- Deployment transaction: `0x26abab424352d9b30938aa7d9dd06a5d0cb0f713c48f9460ba2903527d11e0ab`
+- Deployed source: 45,544 bytes, SHA-256 `d0f8c3b612836503f3558421a9b84a94e76afd6219dbeeea696927c45b0718e2`
+- Review tag: `reviewer-evidence-2026-10-27-v13`
+- Immutable frontend: `https://bea-3ymhr18yh-adebiyi2002gmailcoms-projects.vercel.app`
+- Vercel deployment: `dpl_AV3Ayae1L21oUudRXEYmBqqN5fQf`
 
-The frontend talks directly to GenLayer and contains no custodial backend. The active hardened deployment has no represented historical release record; the prior release-1 trace belongs to a superseded contract and is labeled as such in the evidence. The review tag and reviewed commit identify the deployed implementation; later documentation-only commits do not change its source digest.
+The frontend talks directly to GenLayer and contains no custodial backend. The active deployment includes current full-lifecycle evidence plus two challenged releases that demonstrate `UNCERTAIN` challenge output cannot preserve acceptance or release escrow.
 
 ## Reproduce
 
@@ -55,6 +54,6 @@ npm run evidence:frontend
 npm run evidence:public
 ```
 
-Current results: 48 protocol guards, 54 contract tests, 28 mutation controls, a successful production build, 20 frontend tests across 6 files, 3 GenVM lint checks, and 0 known production dependency vulnerabilities. See [`docs/VERIFICATION_RESULTS.md`](docs/VERIFICATION_RESULTS.md), [`docs/REVIEWER_EVIDENCE.md`](docs/REVIEWER_EVIDENCE.md), and [`docs/VERDICT_INVARIANT.md`](docs/VERDICT_INVARIANT.md).
+Current results: 53 protocol guards, 59 contract tests, 32 mutation controls, a successful production build, 20 frontend tests across 6 files, 3 GenVM lint checks, and 0 known production dependency vulnerabilities. See [`docs/VERIFICATION_RESULTS.md`](docs/VERIFICATION_RESULTS.md), [`docs/REVIEWER_EVIDENCE.md`](docs/REVIEWER_EVIDENCE.md), and [`docs/VERDICT_INVARIANT.md`](docs/VERDICT_INVARIANT.md).
 
 GitHub Actions receives branch and tag pushes, but the repository owner's billing lock currently prevents jobs from starting. This is reported as an external CI availability limitation, not as a passing run.

@@ -6,8 +6,8 @@ const require = createRequire(new URL("../frontend/package.json", import.meta.ur
 const { createClient } = require("genlayer-js");
 const { studionet } = require("genlayer-js/chains");
 
-const address = "0x3244f824cD071D564071AD5ad8207953a0A04Efb";
-const deployment = "0xf5863c8d931f250430261570129a51ebb4f11c8251502b4c862ef4bc8497008c";
+const address = "0x37c8de10d3cC7ba4353608441A57a917e9628618";
+const deployment = "0x26abab424352d9b30938aa7d9dd06a5d0cb0f713c48f9460ba2903527d11e0ab";
 const localSource = readFileSync(new URL("../contract/contracts/beacon.py", import.meta.url), "utf8");
 const client = createClient({ chain: studionet });
 

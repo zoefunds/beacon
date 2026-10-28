@@ -1,27 +1,26 @@
 # Deployment
 
-> Deployment record verified 27 October 2026.
+> Deployment record verified 28 October 2026.
 
 ## Active production record
 
 | Item | Value |
 | --- | --- |
 | Frontend | `https://bea-con.vercel.app/` |
-| Immutable frontend URL | `https://bea-oq7tlnoeg-adebiyi2002gmailcoms-projects.vercel.app` |
-| Vercel deployment | `dpl_63hpRvuraJ8oPWmwCvHsk7g1ipsL` |
+| Immutable frontend URL | `https://bea-3ymhr18yh-adebiyi2002gmailcoms-projects.vercel.app` |
+| Vercel deployment | `dpl_AV3Ayae1L21oUudRXEYmBqqN5fQf` |
 | Network | GenLayer Studionet (`61999`) |
 | RPC | `https://studio.genlayer.com/api` |
-| Contract | `0x3244f824cD071D564071AD5ad8207953a0A04Efb` |
-| Deployment transaction | `0xf5863c8d931f250430261570129a51ebb4f11c8251502b4c862ef4bc8497008c` |
-| Source SHA-256 | `406376022834a27cc6b53a13ea7168de0d2709bd94288eff3d9a01c159b85d35` |
-| Source size | `43,247` bytes |
-| Review reference | `reviewer-evidence-2026-10-27-v12` |
-| Reviewed commit | `7d2c0b6b7d1a2c8ec20458e331c46c633d3ae77d` |
+| Contract | `0x37c8de10d3cC7ba4353608441A57a917e9628618` |
+| Deployment transaction | `0x26abab424352d9b30938aa7d9dd06a5d0cb0f713c48f9460ba2903527d11e0ab` |
+| Source SHA-256 | `d0f8c3b612836503f3558421a9b84a94e76afd6219dbeeea696927c45b0718e2` |
+| Source size | `45,544` bytes |
+| Review reference | `reviewer-evidence-2026-10-27-v13` |
 
 `npm run evidence:live` retrieves the active code with `gen_getContractCode` and matches the full payload byte-for-byte against `contract/contracts/beacon.py`. The deployment finalized with a majority consensus result and successful leader execution. The direct repository `genvm-lint` run independently passes all 3 lint checks.
 
-Set `NEXT_PUBLIC_BEACON_CONTRACT_ADDRESS=0x3244f824cD071D564071AD5ad8207953a0A04Efb` for the frontend. The deployed routes are `/`, `/launch`, `/attestations?release=<id>`, and `/vault`. The browser communicates directly with GenLayer and contains no server wallet or database.
+Set `NEXT_PUBLIC_BEACON_CONTRACT_ADDRESS=0x37c8de10d3cC7ba4353608441A57a917e9628618` for the frontend. The deployed routes are `/`, `/launch`, `/attestations?release=<id>`, and `/vault`. The browser communicates directly with GenLayer and contains no server wallet or database.
 
-`npm run check` runs 48 protocol guards, 54 contract tests, 28 mutation controls, a production build, and 20 frontend tests. `genvm-lint contract/contracts/beacon.py` passes 3 checks and `npm --prefix frontend audit --omit=dev` reports 0 vulnerabilities.
+`npm run check` runs 53 protocol guards, 59 contract tests, 32 mutation controls, a production build, and 20 frontend tests. `genvm-lint contract/contracts/beacon.py` passes 3 checks and `npm --prefix frontend audit --omit=dev` reports 0 vulnerabilities.
 
-The earlier complete lifecycle transaction trace is retained in `REVIEWER_EVIDENCE.md` as historical evidence for the superseded deployment; it is not presented as evidence of the active contract's stricter runtime-check rule. The review tag and commit identify the deployed implementation; documentation-only commits after that reference do not alter the deployed source.
+The active deployment's release 3 trace covers agreement creation, 1 GEN funding, strict runtime sealing, inventory, byte verification, native semantic assessment, accepted certification, the full challenge window, finalization, withdrawal, and the triggered 1 GEN transfer. Active releases 1 and 2 separately demonstrate that uncertain challenge reviews become non-settleable `INDETERMINATE`. The older trace is retained only as superseded historical evidence.

@@ -46,5 +46,6 @@ def test_seal_requires_commit_identifiers_and_evidence_roots():
     exec(compile(ast.Module(body=nodes, type_ignores=[]), "seal", "exec"), namespace)
     assert not namespace["valid_seal"]({})
     value = {key: "a" * 40 for key in ("commit", "tree", "baseline_tree", "observed_ref_head")}
-    value.update({"change_root": "b" * 64, "runtime_root": "c" * 64, "changes": [], "runtime_checks": []})
+    value.update({"change_root": "b" * 64, "runtime_root": "c" * 64, "runtime_policy_root": "d" * 64, "changes": [],
+                  "runtime_checks": [{"name": "tests"}], "check_total": 1, "runtime_state": "PASS"})
     assert namespace["valid_seal"](value)

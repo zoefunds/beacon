@@ -1,6 +1,6 @@
 # Threat model
 
-> Threat model verified 27 October 2026 against `reviewer-evidence-2026-10-27-v12`. The completed release 1 trace is historical evidence for a superseded contract.
+> Threat model verified 28 October 2026 against `reviewer-evidence-2026-10-27-v13` and the active Studionet lifecycle traces.
 
 Beacon assumes public Git hosts return a consistent API response to validators under GenLayer consensus. It does not trust a sponsor, implementer, browser, or semantic model to choose evidence selectively.
 
@@ -21,7 +21,8 @@ Beacon assumes public Git hosts return a consistent API response to validators u
 | Non-decisive model result | Seven-day review followed by permissionless sponsor refund; no permanent escrow lock. |
 | First post-deadline caller selects evidence | `begin_inventory` only advances the already stored seal and never reads the moving branch. |
 | Release hides its effective delta | The pre-deadline seal commits a bounded baseline-to-release manifest and its root; invalid, oversized, or incomplete API data fails closed. |
-| Runtime checks missing or failing | The seal records public check runs; absent, pending, failed, malformed, or non-successful evidence can never satisfy accepted settlement. |
+| Runtime check omitted by pagination | The seal requests 100 checks, bounds the response at 32, and requires returned length to equal GitHub's `total_count`; an incomplete page cannot seal. |
+| Irrelevant green check substituted | Sponsors commit required check name/app pairs in the agreement; every required identity must be present, every returned check must target the sealed commit, and all returned checks must succeed. |
 | Duplicate discovery or transition calls | Discovery is explicitly one-shot; later methods require exact state and coverage counters. |
 | Validator prose differs | Consensus compares both the bounded settlement category and the complete ordered obligation-status vector while retaining prose only as supporting evidence. |
 | Contradictory semantic acceptance | Normalization, component aggregation, and challenge review each reject an obligation-bearing `ACCEPT` unless every ordered status is `MET`. |

@@ -10,4 +10,4 @@ Challenge review reconstructs the challenged entry's complete deterministic comp
 
 Focused direct tests cover both `ACCEPT + NOT_MET` and `ACCEPT + UNCERTAIN` during component assessment, forged certificate aggregation, and challenge review. All cases produce `INDETERMINATE`, never an accepted certificate.
 
-The active hardened contract is [`0x3244f824cD071D564071AD5ad8207953a0A04Efb`](https://explorer-studio.genlayer.com/tx/0xf5863c8d931f250430261570129a51ebb4f11c8251502b4c862ef4bc8497008c). Its source matches [the reviewed contract](https://github.com/zoefunds/beacon/blob/reviewer-evidence-2026-10-27-v12/contract/contracts/beacon.py) byte-for-byte.
+The active hardened contract is [`0x37c8de10d3cC7ba4353608441A57a917e9628618`](https://explorer-studio.genlayer.com/tx/0x26abab424352d9b30938aa7d9dd06a5d0cb0f713c48f9460ba2903527d11e0ab). Its source matches [the reviewed contract](https://github.com/zoefunds/beacon/blob/reviewer-evidence-2026-10-27-v13/contract/contracts/beacon.py) byte-for-byte.

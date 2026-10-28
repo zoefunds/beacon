@@ -19,7 +19,7 @@ for (const url of scripts) {
 }
 
 const required = [
-  "0x3244f824cD071D564071AD5ad8207953a0A04Efb",
+  "0x37c8de10d3cC7ba4353608441A57a917e9628618",
   "FINALIZED",
   "seal_release",
   "sponsor",

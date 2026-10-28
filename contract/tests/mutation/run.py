@@ -134,6 +134,22 @@ def test_removing_challenge_uncertainty_clock_is_rejected():
     assert mutation_is_rejected('item["indeterminate_until"] = now() + INDETERMINATE_REFUND_SECONDS', 'item["indeterminate_until"] = now()', replace_all=True)
 
 
+def test_removing_check_run_response_completeness_is_rejected():
+    assert mutation_is_rejected('check_total != len(check_runs)', 'False')
+
+
+def test_removing_sponsor_required_check_policy_is_rejected():
+    assert mutation_is_rejected('required_checks.issubset(available_checks)', 'True')
+
+
+def test_removing_per_check_commit_binding_is_rejected():
+    assert mutation_is_rejected('str((check or {}).get("head_sha", "")).lower() != commit.lower()', 'False')
+
+
+def test_removing_runtime_policy_commitment_is_rejected():
+    assert mutation_is_rejected('"runtime_policy_root": digest(item["required_checks"])', '"runtime_policy_root": "0" * 64')
+
+
 if __name__ == "__main__":
     tests = [
         test_removing_the_deadline_guard_is_rejected,
@@ -164,6 +180,10 @@ if __name__ == "__main__":
         test_removing_validator_status_consensus_is_rejected,
         test_removing_bounded_status_vocabulary_is_rejected,
         test_removing_challenge_uncertainty_clock_is_rejected,
+        test_removing_check_run_response_completeness_is_rejected,
+        test_removing_sponsor_required_check_policy_is_rejected,
+        test_removing_per_check_commit_binding_is_rejected,
+        test_removing_runtime_policy_commitment_is_rejected,
     ]
     for test in tests:
         test()

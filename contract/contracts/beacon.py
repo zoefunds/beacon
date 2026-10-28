@@ -24,6 +24,9 @@ MAX_SCOPE_PATH_CHARS = 240
 MAX_COMPONENT_SOURCE_CHARS = 30000
 MAX_IMPORTS_PER_FILE = 32
 MAX_RUNTIME_CHECKS = 32
+MAX_REQUIRED_CHECKS = 8
+MAX_CHECK_NAME_CHARS = 120
+MAX_APP_SLUG_CHARS = 100
 
 TEXT_EXTENSIONS = {"py", "js", "jsx", "ts", "tsx", "json", "md", "yml", "yaml", "toml", "css", "html", "sh", "txt"}
 TERMINAL = {"ACCEPTED", "REJECTED", "EXPIRED", "REFUNDED"}
@@ -50,9 +53,10 @@ def root(value):
 def valid_seal(value):
     return (isinstance(value, dict) and
             all(sha(str(value.get(key, ""))) for key in ("commit", "tree", "baseline_tree", "observed_ref_head")) and
-            all(root(str(value.get(key, ""))) for key in ("change_root", "runtime_root")) and
+            all(root(str(value.get(key, ""))) for key in ("change_root", "runtime_root", "runtime_policy_root")) and
             isinstance(value.get("changes"), list) and isinstance(value.get("runtime_checks"), list) and
-            len(value["changes"]) <= MAX_PATHS and len(value["runtime_checks"]) <= MAX_RUNTIME_CHECKS)
+            len(value["changes"]) <= MAX_PATHS and 1 <= len(value["runtime_checks"]) <= MAX_RUNTIME_CHECKS and
+            value.get("check_total") == len(value["runtime_checks"]) and value.get("runtime_state") == "PASS")
 
 def repository(value):
     return bool(re.fullmatch(r"[A-Za-z0-9_.-]{1,100}/[A-Za-z0-9_.-]{1,100}", value or ""))
@@ -140,6 +144,24 @@ def normalized_scope(raw):
     values = sorted(set(v.strip().rstrip("/") for v in values))
     if len(values) == 0 or any(not path_ok(v) or len(v) > MAX_SCOPE_PATH_CHARS for v in values): raise gl.vm.UserError("invalid_scope_path")
     return values
+
+def normalized_required_checks(raw):
+    try: values = json.loads(raw)
+    except Exception: raise gl.vm.UserError("invalid_required_checks")
+    if not isinstance(values, list) or not 1 <= len(values) <= MAX_REQUIRED_CHECKS:
+        raise gl.vm.UserError("invalid_required_checks")
+    checks = []
+    for value in values:
+        if not isinstance(value, dict): raise gl.vm.UserError("invalid_required_checks")
+        name, app_slug = str(value.get("name", "")).strip(), str(value.get("app_slug", "")).strip().lower()
+        if (not 1 <= len(name) <= MAX_CHECK_NAME_CHARS or
+                not re.fullmatch(r"[a-z0-9][a-z0-9-]{0," + str(MAX_APP_SLUG_CHARS - 1) + r"}", app_slug)):
+            raise gl.vm.UserError("invalid_required_checks")
+        checks.append({"name": name, "app_slug": app_slug})
+    ordered = sorted(checks, key=lambda value: (value["name"], value["app_slug"]))
+    if len({(value["name"], value["app_slug"]) for value in ordered}) != len(ordered):
+        raise gl.vm.UserError("duplicate_required_check")
+    return ordered
 
 def in_scope(path, scopes):
     return any(path == item or path.startswith(item + "/") for item in scopes)
@@ -257,14 +279,17 @@ class Beacon(gl.Contract):
         head = ((branch.get("commit") or {}).get("sha") or "").lower()
         compare = read_json(f"https://api.github.com/repos/{repo}/compare/{commit}...{head}")
         baseline_compare = read_json(f"https://api.github.com/repos/{repo}/compare/{item['baseline']}...{commit}")
-        checks_data = read_json(f"https://api.github.com/repos/{repo}/commits/{commit}/check-runs")
+        checks_data = read_json(f"https://api.github.com/repos/{repo}/commits/{commit}/check-runs?filter=latest&per_page=100")
         baseline_tree = str(((baseline_data.get("commit") or {}).get("tree") or {}).get("sha", "")).lower()
         if str(commit_data.get("sha", "")).lower() != commit.lower() or str(baseline_data.get("sha", "")).lower() != item["baseline"] or not sha(tree) or not sha(head) or not sha(baseline_tree): return None
         if not isinstance(compare, dict) or str(((compare.get("merge_base_commit") or {}).get("sha") or "")).lower() != commit.lower(): return None
         if not isinstance(baseline_compare, dict) or str(((baseline_compare.get("merge_base_commit") or {}).get("sha") or "")).lower() != item["baseline"]: return None
         files = baseline_compare.get("files")
         check_runs = (checks_data or {}).get("check_runs") if isinstance(checks_data, dict) else None
-        if not isinstance(files, list) or len(files) > MAX_PATHS or not isinstance(check_runs, list) or len(check_runs) > MAX_RUNTIME_CHECKS: return None
+        check_total = (checks_data or {}).get("total_count") if isinstance(checks_data, dict) else None
+        if (not isinstance(files, list) or len(files) > MAX_PATHS or not isinstance(check_runs, list) or
+                not isinstance(check_total, int) or check_total != len(check_runs) or
+                not 1 <= check_total <= MAX_RUNTIME_CHECKS): return None
         changes = []
         for file in files:
             filename = str((file or {}).get("filename", "")); previous = str((file or {}).get("previous_filename", ""))
@@ -273,23 +298,30 @@ class Beacon(gl.Contract):
             changes.append({"path": filename, "previous_path": previous, "status": str((file or {}).get("status", ""))[:24],
                             "blob": str((file or {}).get("sha", "")).lower(), "additions": int((file or {}).get("additions", 0)),
                             "deletions": int((file or {}).get("deletions", 0)), "changes": int((file or {}).get("changes", 0))})
-        if str(checks_data.get("head_sha", "")).lower() != commit.lower(): return None
         runtime_checks = []
         for check in check_runs:
-            runtime_checks.append({"name": str((check or {}).get("name", ""))[:120], "status": str((check or {}).get("status", ""))[:24],
-                                   "conclusion": str((check or {}).get("conclusion", ""))[:24],
-                                   "url": str((check or {}).get("html_url", ""))[:300]})
-        runtime_state = ("ABSENT" if not runtime_checks else
-                         ("PASS" if all(check["status"] == "completed" and check["conclusion"] == "success" for check in runtime_checks) else
-                          ("PENDING" if any(check["status"] != "completed" for check in runtime_checks) else "FAIL")))
+            name = str((check or {}).get("name", "")); app_slug = str((((check or {}).get("app") or {}).get("slug", ""))).lower()
+            if (str((check or {}).get("head_sha", "")).lower() != commit.lower() or
+                    not 1 <= len(name) <= MAX_CHECK_NAME_CHARS or
+                    not re.fullmatch(r"[a-z0-9][a-z0-9-]{0," + str(MAX_APP_SLUG_CHARS - 1) + r"}", app_slug)):
+                return None
+            runtime_checks.append({"name": name, "app_slug": app_slug, "status": str((check or {}).get("status", ""))[:24],
+                                   "conclusion": str((check or {}).get("conclusion", ""))[:24], "url": str((check or {}).get("html_url", ""))[:300]})
+        runtime_checks = sorted(runtime_checks, key=lambda value: (value["name"], value["app_slug"], value["url"]))
+        available_checks = {(value["name"], value["app_slug"]) for value in runtime_checks}
+        required_checks = {(value["name"], value["app_slug"]) for value in item["required_checks"]}
+        required_present = required_checks.issubset(available_checks)
+        runtime_state = ("PASS" if required_present and all(check["status"] == "completed" and check["conclusion"] == "success" for check in runtime_checks) else
+                         ("PENDING" if any(check["status"] != "completed" for check in runtime_checks) else "FAIL"))
+        if runtime_state != "PASS": return None
         return {"commit": commit.lower(), "tree": tree, "baseline_tree": baseline_tree, "observed_ref_head": head,
                 "changes": sorted(changes, key=lambda value: (value["path"], value["previous_path"])),
-                "runtime_checks": sorted(runtime_checks, key=lambda value: value["name"]), "runtime_state": runtime_state,
+                "runtime_checks": runtime_checks, "runtime_state": runtime_state, "check_total": check_total,
                 "change_root": digest(sorted(changes, key=lambda value: (value["path"], value["previous_path"]))),
-                "runtime_root": digest(sorted(runtime_checks, key=lambda value: value["name"]))}
+                "runtime_root": digest(runtime_checks), "runtime_policy_root": digest(item["required_checks"])}
 
     @gl.public.write
-    def open_release(self, repo: str, ref: str, baseline: str, implementer: str, title: str, obligations_json: str, scope_json: str, seal_by: int) -> str:
+    def open_release(self, repo: str, ref: str, baseline: str, implementer: str, title: str, obligations_json: str, scope_json: str, required_checks_json: str, seal_by: int) -> str:
         implementer_address = str(implementer)
         if not repository(repo) or not sha(baseline) or not re.fullmatch(r"0x[0-9a-fA-F]{40}", implementer_address): raise gl.vm.UserError("invalid_identity")
         if not 1 <= len(ref.strip()) <= MAX_REF_CHARS or any(value in ref for value in ("..", "?", "#", "\x00")): raise gl.vm.UserError("invalid_ref")
@@ -299,7 +331,7 @@ class Beacon(gl.Contract):
         except Exception: raise gl.vm.UserError("invalid_obligations")
         if not isinstance(obligations, list) or not 1 <= len(obligations) <= MAX_OBLIGATIONS or any(not isinstance(x, str) or not x.strip() or len(x.strip()) > MAX_OBLIGATION_CHARS for x in obligations): raise gl.vm.UserError("invalid_obligations")
         release_id = self.next_id; self.next_id = u256(int(release_id) + 1)
-        item = {"id": int(release_id), "state": "DRAFT", "repo": repo, "ref": ref.strip(), "baseline": baseline.lower(), "implementer": implementer_address.lower(), "sponsors": {}, "escrow": 0, "title": title.strip(), "obligations": [str(x).strip() for x in obligations], "scope": normalized_scope(scope_json), "seal_by": seal_by, "seal": None, "inventory_discovered": False, "inventory_count": 0, "materialized_count": 0, "component_count": 0, "assessed_count": 0, "edge_count": 0, "reviewed_edges": 0, "blockers": [], "challenge_until": 0, "indeterminate_until": 0, "challenge": None, "certificate": None}
+        item = {"id": int(release_id), "state": "DRAFT", "repo": repo, "ref": ref.strip(), "baseline": baseline.lower(), "implementer": implementer_address.lower(), "sponsors": {}, "escrow": 0, "title": title.strip(), "obligations": [str(x).strip() for x in obligations], "scope": normalized_scope(scope_json), "required_checks": normalized_required_checks(required_checks_json), "seal_by": seal_by, "seal": None, "inventory_discovered": False, "inventory_count": 0, "materialized_count": 0, "component_count": 0, "assessed_count": 0, "edge_count": 0, "reviewed_edges": 0, "blockers": [], "challenge_until": 0, "indeterminate_until": 0, "challenge": None, "certificate": None}
         self._save(release_id, item)
         return canonical({"release_id": int(release_id), "state": "DRAFT"})
 
@@ -523,7 +555,7 @@ class Beacon(gl.Contract):
         accepted = not item["blockers"] and results and all(x == "ACCEPT" for x in results) and all_obligations_met and runtime_evidence_passed and all(x == "ACCEPT" for x in edge_results)
         rejected = "REJECT" in results or "REJECT" in edge_results
         outcome = "ACCEPTED" if accepted else ("REJECTED" if rejected else "INDETERMINATE")
-        agreement = {key: item[key] for key in ("id", "repo", "ref", "baseline", "implementer", "sponsors", "escrow", "title", "obligations", "scope", "seal_by")}
+        agreement = {key: item[key] for key in ("id", "repo", "ref", "baseline", "implementer", "sponsors", "escrow", "title", "obligations", "scope", "required_checks", "seal_by")}
         item["certificate"] = {"outcome": outcome, "agreement_root": digest(agreement), "seal_root": digest(item["seal"]), "inventory_root": digest(inventory), "assessment_root": digest(assessments), "edge_root": digest(reviewed_edges), "obligation_root": digest(item["obligations"]), "coverage": [item["inventory_count"], item["materialized_count"], item["component_count"], item["assessed_count"], item["edge_count"], item["reviewed_edges"]], "blockers": item["blockers"]}
         if outcome == "INDETERMINATE": item["state"] = "REVIEW"; item["indeterminate_until"] = now() + INDETERMINATE_REFUND_SECONDS
         else: item["state"] = "REVIEW"; item["challenge_until"] = now() + CHALLENGE_SECONDS

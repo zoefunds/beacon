@@ -1,23 +1,28 @@
 # Reviewer evidence
 
-> Evidence snapshot verified 27 October 2026.
+> Evidence snapshot verified 28 October 2026.
 
-The canonical public review reference is `reviewer-evidence-2026-10-27-v12`. Start with [`../REVIEWER_SUBMISSION.md`](../REVIEWER_SUBMISSION.md) for direct source links and the active deployment record.
+The canonical public review reference is `reviewer-evidence-2026-10-27-v13`. Start with [`../REVIEWER_SUBMISSION.md`](../REVIEWER_SUBMISSION.md) for direct source links and the active deployment record.
 
 ## Artifact identity
 
-- Contract: `0x3244f824cD071D564071AD5ad8207953a0A04Efb`
-- Reviewed commit: `7d2c0b6b7d1a2c8ec20458e331c46c633d3ae77d`
-- Deployment: `0xf5863c8d931f250430261570129a51ebb4f11c8251502b4c862ef4bc8497008c`
-- Source SHA-256: `406376022834a27cc6b53a13ea7168de0d2709bd94288eff3d9a01c159b85d35`
-- Source size: 43,247 bytes
+- Contract: `0x37c8de10d3cC7ba4353608441A57a917e9628618`
+- Deployment: `0x26abab424352d9b30938aa7d9dd06a5d0cb0f713c48f9460ba2903527d11e0ab`
+- Source SHA-256: `d0f8c3b612836503f3558421a9b84a94e76afd6219dbeeea696927c45b0718e2`
+- Source size: 45,544 bytes
 - Frontend: `https://bea-con.vercel.app/`
-- Immutable frontend: `https://bea-oq7tlnoeg-adebiyi2002gmailcoms-projects.vercel.app`
-- Vercel deployment: `dpl_63hpRvuraJ8oPWmwCvHsk7g1ipsL`
+- Immutable frontend: `https://bea-3ymhr18yh-adebiyi2002gmailcoms-projects.vercel.app`
+- Vercel deployment: `dpl_AV3Ayae1L21oUudRXEYmBqqN5fQf`
 
 `npm run evidence:live` uses `gen_getContractCode` to retrieve the deployed contract and match the local source byte-for-byte. The deployment transaction finalized with majority agreement and successful leader execution; the direct repository `genvm-lint` run passed all 3 checks.
 
-## Historical lifecycle trace
+## Active lifecycle evidence
+
+Active releases 1 and 2 were fully funded, sealed, inventoried, byte-verified, semantically assessed, proposed as `ACCEPTED`, and challenged. Both challenge assessments returned `UNCERTAIN`; the contract changed each certificate to `INDETERMINATE`, set the seven-day refund deadline, and did not credit or transfer escrow. These traces independently demonstrate that uncertain challenge output cannot lead to or preserve an accepted certificate.
+
+Active release 3 uses the same public `sindresorhus/yoctocolors` commit, exact one-file scope, and required `Node.js 18` and `Node.js 23` checks from the `github-actions` app. Its seal records `check_total: 2`, both checks successful for the exact commit, plus committed runtime and runtime-policy roots. The full transaction table is maintained in [`../REVIEWER_SUBMISSION.md`](../REVIEWER_SUBMISSION.md).
+
+## Superseded lifecycle trace
 
 The transactions below are a complete lifecycle trace on the superseded contract `0xeE34e10CF770aaDbfA9C369Eec946eb5c3D164E9`. They substantiate the prior escrow lifecycle only. They are explicitly not claimed as proof of a certificate issued by the active hardened contract, which adds baseline-change and successful-runtime-check requirements.
 
@@ -36,8 +41,8 @@ Transaction `0xce4a2ec175194e41331f83791e2bd1882343b85b4e017a4578a7e74cd17b983a`
 
 ## Adversarial coverage
 
-Tests cover incomplete and truncated inventories, missing or mismatched blobs, unsupported content, unresolved and ambiguous dependencies, import/edge/component/source bounds, incomplete assessments, invalid certificates, malformed status vectors, validator disagreement, unauthorized seal and challenge calls, premature and duplicate settlement, rejection routing, expiry, double withdrawal, value-safe funding, and exact seven-day indeterminate recovery.
+Tests cover incomplete and truncated inventories, missing or mismatched blobs, unsupported content, unresolved and ambiguous dependencies, import/edge/component/source bounds, incomplete assessments, invalid certificates, malformed status vectors, validator disagreement, check pagination mismatch, missing required check identities, unapproved check apps, failed checks, wrong check commits, unauthorized seal and challenge calls, premature and duplicate settlement, rejection routing, expiry, double withdrawal, value-safe funding, and exact seven-day indeterminate recovery.
 
-`npm run check` passes 48 protocol guards, 54 contract tests, 28 mutation controls, a production build, and 20 frontend tests. GenVM lint passes 3 checks and the production dependency audit reports 0 vulnerabilities.
+`npm run check` passes 53 protocol guards, 59 contract tests, 32 mutation controls, a production build, and 20 frontend tests. GenVM lint passes 3 checks and the production dependency audit reports 0 vulnerabilities.
 
 GitHub Actions is configured but cannot currently start jobs because of the repository owner's billing lock. No CI run is represented as passing.

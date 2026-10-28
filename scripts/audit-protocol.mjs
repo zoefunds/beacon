@@ -51,6 +51,11 @@ const required = [
   ["leader_value[\"statuses\"] == validator_value[\"statuses\"]", "validator agreement on obligation statuses"],
   ["status not in {\"MET\", \"NOT_MET\", \"UNCERTAIN\"}", "bounded semantic status vocabulary"],
   ["item[\"indeterminate_until\"] = now() + INDETERMINATE_REFUND_SECONDS", "challenge uncertainty refund clock"],
+  ["filter=latest&per_page=100", "bounded complete check-run request"],
+  ["check_total != len(check_runs)", "check-run pagination completeness gate"],
+  ["required_checks.issubset(available_checks)", "sponsor-defined required check gate"],
+  ["\"runtime_policy_root\": digest(item[\"required_checks\"])", "required check policy commitment"],
+  ["str((check or {}).get(\"head_sha\", \"\")).lower() != commit.lower()", "per-check sealed commit binding"],
 ];
 const missing = required.filter(([needle]) => !source.includes(needle)).map(([, name]) => name);
 if ((source.match(/_Recipient\(Address\(account\)\)\.emit_transfer/g) || []).length !== 2) {

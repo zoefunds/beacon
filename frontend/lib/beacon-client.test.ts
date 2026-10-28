@@ -65,11 +65,12 @@ test("release creation finalizes before deposit, and deposit finalizes before al
   const transaction = await openRelease({
     account: `0x${"2".repeat(40)}`, provider: { request: vi.fn() }, repo: "org/repo", ref: "main",
     baseline: "a".repeat(40), implementer: `0x${"3".repeat(40)}`, title: "Release",
-    obligations: ["Works"], scope: ["src"], sealBy: 2_000_000_000, escrowWei: 10n ** 18n,
+    obligations: ["Works"], scope: ["src"], requiredChecks: [{ name: "tests", app_slug: "github-actions" }], sealBy: 2_000_000_000, escrowWei: 10n ** 18n,
   });
   expect(transaction.releaseId).toBe(7n);
   expect(clientMocks.writeContract.mock.calls.map(call => call[0].functionName)).toEqual(["open_release", "deposit_funding", "sponsor"]);
   expect(clientMocks.writeContract.mock.calls[0][0].value).toBe(0n);
+  expect((clientMocks.writeContract.mock.calls[0][0].args as unknown[])[7]).toBe('[{"name":"tests","app_slug":"github-actions"}]');
   expect(clientMocks.writeContract.mock.calls[1][0].value).toBe(10n ** 18n);
   expect(clientMocks.writeContract.mock.calls[2][0].args).toEqual([7n, 10n ** 18n]);
 });
@@ -83,7 +84,7 @@ test("a failed deposit is not followed by an allocation retry", async () => {
   await expect(openRelease({
     account: `0x${"2".repeat(40)}`, provider: { request: vi.fn() }, repo: "org/repo", ref: "main",
     baseline: "a".repeat(40), implementer: `0x${"3".repeat(40)}`, title: "Release",
-    obligations: ["Works"], scope: ["src"], sealBy: 2_000_000_000, escrowWei: 10n ** 18n,
+    obligations: ["Works"], scope: ["src"], requiredChecks: [{ name: "tests", app_slug: "github-actions" }], sealBy: 2_000_000_000, escrowWei: 10n ** 18n,
   })).rejects.toThrow(/rolled back/);
   expect(clientMocks.writeContract.mock.calls.map(call => call[0].functionName)).toEqual(["open_release", "deposit_funding"]);
 });

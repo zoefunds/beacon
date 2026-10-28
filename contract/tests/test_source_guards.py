@@ -110,5 +110,10 @@ def test_accept_requires_all_met_at_model_component_certificate_and_challenge_la
 def test_seal_and_challenge_bind_baseline_runtime_component_and_dependency_context():
     text = source()
     assert 'change_root' in text and 'runtime_root' in text and '/check-runs' in text
+    assert 'filter=latest&per_page=100' in text
+    assert 'check_total != len(check_runs)' in text
+    assert 'required_checks.issubset(available_checks)' in text
+    assert 'runtime_policy_root' in text
+    assert 'check or {}).get("head_sha"' in text
     assert 'component_sources' in text and 'dependency_edges' in text
     assert 'context_root' in text
