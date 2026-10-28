@@ -2,7 +2,7 @@
 
 > Results last reproduced 28 October 2026.
 
-Reference: `reviewer-evidence-2026-10-27-v13`.
+Reference: `reviewer-evidence-2026-10-27-v13` (`dda9adbde0d7d797943fd030d85dbae36a2a47c9`).
 
 | Command | Result |
 | --- | --- |

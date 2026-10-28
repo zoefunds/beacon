@@ -7,6 +7,7 @@ The canonical public review reference is `reviewer-evidence-2026-10-27-v13`. Sta
 ## Artifact identity
 
 - Contract: `0x37c8de10d3cC7ba4353608441A57a917e9628618`
+- Reviewed implementation commit: `dda9adbde0d7d797943fd030d85dbae36a2a47c9`
 - Deployment: `0x26abab424352d9b30938aa7d9dd06a5d0cb0f713c48f9460ba2903527d11e0ab`
 - Source SHA-256: `d0f8c3b612836503f3558421a9b84a94e76afd6219dbeeea696927c45b0718e2`
 - Source size: 45,544 bytes
@@ -21,23 +22,6 @@ The canonical public review reference is `reviewer-evidence-2026-10-27-v13`. Sta
 Active releases 1 and 2 were fully funded, sealed, inventoried, byte-verified, semantically assessed, proposed as `ACCEPTED`, and challenged. Both challenge assessments returned `UNCERTAIN`; the contract changed each certificate to `INDETERMINATE`, set the seven-day refund deadline, and did not credit or transfer escrow. These traces independently demonstrate that uncertain challenge output cannot lead to or preserve an accepted certificate.
 
 Active release 3 uses the same public `sindresorhus/yoctocolors` commit, exact one-file scope, and required `Node.js 18` and `Node.js 23` checks from the `github-actions` app. Its seal records `check_total: 2`, both checks successful for the exact commit, plus committed runtime and runtime-policy roots. The full transaction table is maintained in [`../REVIEWER_SUBMISSION.md`](../REVIEWER_SUBMISSION.md).
-
-## Superseded lifecycle trace
-
-The transactions below are a complete lifecycle trace on the superseded contract `0xeE34e10CF770aaDbfA9C369Eec946eb5c3D164E9`. They substantiate the prior escrow lifecycle only. They are explicitly not claimed as proof of a certificate issued by the active hardened contract, which adds baseline-change and successful-runtime-check requirements.
-
-That historical release was sealed to commit `d0dd1f61b33d64e29d8bc1372a94ef6a2fee76a9` and tree `d7cee29eaada459ba458a63ad983a89915c6a10a`. The scoped `index.html` blob was verified, deterministic coverage was `[1,1,1,1,0,0]`, blockers were empty, and native validator consensus returned `ACCEPT` with obligation status `MET`.
-
-The certificate commits these roots:
-
-- agreement: `a00f780b284424780617e08e60c6a1782baba3d710637cb593c1a33cacf3f655`
-- seal: `3adb0e26eea2904ca4f8a6716c3063b6eee19bec9d1a9976c776ae6e438f6347`
-- inventory: `b6df8542582d43c6342c2b08f3a4fb33a3d96e233ce76f90fd8efe36f23b507f`
-- assessment: `9378d36c8871dff961b319b21da4992b5ccf417bc682080f13e2e73836f28a36`
-- edges: `4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945`
-- obligations: `7801a49a9fe713bc618e0d381d9b7eeac0daf25116b599d943748bbe034a6d41`
-
-Transaction `0xce4a2ec175194e41331f83791e2bd1882343b85b4e017a4578a7e74cd17b983a` proves premature finalization rolls back while the challenge window is open. Finalization `0x2c0b51a43d925857cb171fa7ce996e67a0a3a3b6fbab9b6e235eba046f52b72a` succeeds after the window; duplicate finalization `0x5ce5d65664ce363b6f3da23fb6298001f3068300b43e5a4bb62cb984bc85634e` rolls back. Withdrawal `0x4b4ec2750e5e6bc615181e8a8643c462d8bd16c1762b55f76213ddb2ff2cf7a0` triggers the 1 GEN transfer `0xab85ab79dc746e7ac2fe90dd79170bf37ca0d908bf50ba33f661077b251926cc`; repeat withdrawal `0xa2c4b180c2a2231276b982314e93425e97eb0f16d9b36ab718e3e28a538281fa` emits no transfer. The active source verifier deliberately checks only the active deployment source, not these superseded transactions.
 
 ## Adversarial coverage
 

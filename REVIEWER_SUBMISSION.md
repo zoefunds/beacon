@@ -6,6 +6,7 @@
 
 - Repository: `https://github.com/zoefunds/beacon`
 - Review tag: `reviewer-evidence-2026-10-27-v13`
+- Reviewed implementation commit: [`dda9adb`](https://github.com/zoefunds/beacon/commit/dda9adbde0d7d797943fd030d85dbae36a2a47c9)
 - Frontend: `https://bea-con.vercel.app/`
 - Immutable frontend: `https://bea-3ymhr18yh-adebiyi2002gmailcoms-projects.vercel.app`
 - Vercel deployment: `dpl_AV3Ayae1L21oUudRXEYmBqqN5fQf`
@@ -54,33 +55,6 @@ Release 3 on the active contract completed the full funded lifecycle against `si
 | Triggered 1 GEN transfer | [`0x1b34…789d`](https://explorer-studio.genlayer.com/tx/0x1b34cd0d88b50f8099a9b9660d1ef4d49322bc97cfb1650a43a2edb5a9ec789d) |
 
 Active releases 1 and 2 separately prove fail-closed challenge handling. Each was provisionally accepted, challenged, and reassessed as `UNCERTAIN`; reviews [`0x7ff0…0e5e`](https://explorer-studio.genlayer.com/tx/0x7ff0cded0100a6c3f7de2d6b23d051b5b388bd2af6e6ee522f40ecf9eab70e5e) and [`0xf33f…6c1c`](https://explorer-studio.genlayer.com/tx/0xf33f468e37e0d4ab2751e7cd6d56487060c5d8f4091f60c7b8edf67540006c1c) changed the certificates to non-settleable `INDETERMINATE` instead of preserving acceptance.
-
-## Historical lifecycle trace
-
-Release 1 is a historical complete-lifecycle trace on the superseded contract. The active hardened contract above is source-verified separately and requires successful public runtime checks for any future payout.
-
-| Event | Studionet transaction |
-| --- | --- |
-| Fund test wallet with 1 GEN | [`0xf3e7…387f`](https://explorer-studio.genlayer.com/tx/0xf3e70c10ba21885a344bd96d4f72d45ad191b4ae02cc9c3085e23c7b9cc0387f) |
-| Create agreement without value | [`0x6303…334d`](https://explorer-studio.genlayer.com/tx/0x63033642e0a275c7602e4c6d7c7d4fa1418807045d7de9156481b3d2eb11334d) |
-| Deposit exactly 1 GEN | [`0xdaec…f75a`](https://explorer-studio.genlayer.com/tx/0xdaec79cb143984d84b823833c0d9efc1b9a8686a7d07ede8eaf5828b57bcf75a) |
-| Allocate deposit to release | [`0xc9be…f1a0`](https://explorer-studio.genlayer.com/tx/0xc9be84bc9bca571e935db8cb108891c0e787031d6d3cf257fe29cdd8411cf1a0) |
-| Seal immutable commit | [`0xfbf1…96ac`](https://explorer-studio.genlayer.com/tx/0xfbf1ef4112996eb748dd227227131f1770e18ddd1711e172df81640303ca96ac) |
-| Begin post-close inventory | [`0xbd07…74ea`](https://explorer-studio.genlayer.com/tx/0xbd0761afba5dcbc6c0cbf113fcc7adb30c2fbd69d7ad258b14d6b7f9298874ea) |
-| Discover complete inventory | [`0xb420…5b4`](https://explorer-studio.genlayer.com/tx/0xb420b89917f2eda7345864281cd89ca3ed474897328ce8cf48f17729995eb5b4) |
-| Close inventory | [`0xfe2b…f8e0`](https://explorer-studio.genlayer.com/tx/0xfe2b17ab9f48491e503eff6959925fdb86c1e035e474e2edfb3305d43304f8e0) |
-| Byte-verify `index.html` | [`0x56e6…caf5`](https://explorer-studio.genlayer.com/tx/0x56e6c1f71eb7905bb92b4b70d5191cd76de80a639b694e44d7168598d08bcaf5) |
-| Build dependency graph | [`0x5396…189e`](https://explorer-studio.genlayer.com/tx/0x5396ece97ab2af9df413929459512303cd4afb884c10e542654bd3f67af9189e) |
-| Semantic assessment (`ACCEPT`, `MET`) | [`0xcefc…f2d2`](https://explorer-studio.genlayer.com/tx/0xcefc8ac7d949fb345dfc35a82ebe0d02b11e89995c8721e0a231e17beadff2d2) |
-| Generate accepted certificate | [`0xdc4f…3bcc`](https://explorer-studio.genlayer.com/tx/0xdc4f8e45fa67c429d95cd9a1ae0aa8a537e55d4c85c0bbd61ce6cebe9bbd3bcc) |
-| Premature finalize rolls back | [`0xce4a…983a`](https://explorer-studio.genlayer.com/tx/0xce4a2ec175194e41331f83791e2bd1882343b85b4e017a4578a7e74cd17b983a) |
-| Finalize after challenge window | [`0x2c0b…b72a`](https://explorer-studio.genlayer.com/tx/0x2c0b51a43d925857cb171fa7ce996e67a0a3a3b6fbab9b6e235eba046f52b72a) |
-| Duplicate finalize rolls back | [`0x5ce5…634e`](https://explorer-studio.genlayer.com/tx/0x5ce5d65664ce363b6f3da23fb6298001f3068300b43e5a4bb62cb984bc85634e) |
-| Beneficiary withdrawal | [`0x4b4e…f7a0`](https://explorer-studio.genlayer.com/tx/0x4b4ec2750e5e6bc615181e8a8643c462d8bd16c1762b55f76213ddb2ff2cf7a0) |
-| Triggered 1 GEN EOA transfer | [`0xab85…26cc`](https://explorer-studio.genlayer.com/tx/0xab85ab79dc746e7ac2fe90dd79170bf37ca0d908bf50ba33f661077b251926cc) |
-| Second withdrawal emits no transfer | [`0xa2c4…81fa`](https://explorer-studio.genlayer.com/tx/0xa2c4b180c2a2231276b982314e93425e97eb0f16d9b36ab718e3e28a538281fa) |
-
-The historical trace reached `ACCEPTED` with coverage `[1,1,1,1,0,0]`; it documents escrow mechanics only and is not evidence for the new runtime-evidence rule. The active deployment is verified by `npm run evidence:live`.
 
 ## Reproduce
 

@@ -2,7 +2,7 @@
 
 > Reproduction instructions verified 28 October 2026.
 
-Beacon's active deployed implementation and evidence are reproducible from tag `reviewer-evidence-2026-10-27-v13`.
+Beacon's active deployed implementation and evidence are reproducible from tag `reviewer-evidence-2026-10-27-v13`, which resolves to commit `dda9adbde0d7d797943fd030d85dbae36a2a47c9`.
 
 ## Verify locally
 

@@ -33,10 +33,11 @@ Unsealed releases can expire to sponsor credit. A certificate can be challenged 
 - Deployment transaction: `0x26abab424352d9b30938aa7d9dd06a5d0cb0f713c48f9460ba2903527d11e0ab`
 - Deployed source: 45,544 bytes, SHA-256 `d0f8c3b612836503f3558421a9b84a94e76afd6219dbeeea696927c45b0718e2`
 - Review tag: `reviewer-evidence-2026-10-27-v13`
+- Reviewed implementation commit: `dda9adbde0d7d797943fd030d85dbae36a2a47c9`
 - Immutable frontend: `https://bea-3ymhr18yh-adebiyi2002gmailcoms-projects.vercel.app`
 - Vercel deployment: `dpl_AV3Ayae1L21oUudRXEYmBqqN5fQf`
 
-The frontend talks directly to GenLayer and contains no custodial backend. The active deployment includes current full-lifecycle evidence plus two challenged releases that demonstrate `UNCERTAIN` challenge output cannot preserve acceptance or release escrow.
+The frontend talks directly to GenLayer and contains no custodial backend. The active deployment includes current full-lifecycle evidence plus two challenged releases that demonstrate `UNCERTAIN` challenge output cannot preserve acceptance or release escrow. The immutable review tag resolves to the reviewed implementation commit above; later documentation-only commits do not alter its source digest.
 
 ## Reproduce
 
